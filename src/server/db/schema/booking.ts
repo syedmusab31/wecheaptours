@@ -46,6 +46,8 @@ export const bookings = pgTable(
   {
     id: serial("id").primaryKey(),
     reference: varchar("reference", { length: 20 }).notNull().unique(),
+    /** Sent by the checkout form once per submit: a double-click or a retry returns the same booking */
+    idempotencyKey: varchar("idempotency_key", { length: 64 }).unique(),
     productId: integer("product_id").references(() => products.id, { onDelete: "set null" }),
     optionId: integer("option_id").references(() => productOptions.id, { onDelete: "set null" }),
     customerId: integer("customer_id").references(() => customers.id, { onDelete: "set null" }),
@@ -93,6 +95,7 @@ export const bookings = pgTable(
     index("bookings_status_idx").on(t.status),
     index("bookings_customer_email_idx").on(t.customerEmail),
     index("bookings_travel_date_idx").on(t.travelDate),
+    index("bookings_created_at_id_idx").on(t.createdAt, t.id),
   ],
 );
 

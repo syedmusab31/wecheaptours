@@ -12,6 +12,10 @@ import { createPool } from "@/server/db/pool";
 
 const STEPS: { name: string; sql: string }[] = [
   {
+    name: "pg_trgm extension (search indexes)",
+    sql: `create extension if not exists pg_trgm;`,
+  },
+  {
     name: "countries table",
     sql: `
       create table if not exists countries (
@@ -83,6 +87,27 @@ const STEPS: { name: string; sql: string }[] = [
           alter table availability_slots alter column start_time set default '00:00:00', alter column start_time set not null;
           alter table availability_slots drop constraint if exists availability_slots_product_date_time_uq;
           alter table availability_slots add constraint availability_slots_product_date_time_uq unique (product_id, starts_on, start_time);
+        end if;
+      end $$;`,
+  },
+  {
+    name: "bookings.idempotency_key (duplicate-submit protection)",
+    sql: `
+      alter table bookings add column if not exists idempotency_key varchar(64);
+      do $$ begin
+        if not exists (select 1 from pg_constraint where conname = 'bookings_idempotency_key_unique') then
+          alter table bookings add constraint bookings_idempotency_key_unique unique (idempotency_key);
+        end if;
+      end $$;`,
+  },
+  {
+    name: "enquiries: customer_name, customer_email, customer_phone",
+    sql: `
+      do $$ begin
+        if exists (select 1 from information_schema.columns where table_name = 'enquiries' and column_name = 'email') then
+          alter table enquiries rename column name to customer_name;
+          alter table enquiries rename column email to customer_email;
+          alter table enquiries rename column phone to customer_phone;
         end if;
       end $$;`,
   },

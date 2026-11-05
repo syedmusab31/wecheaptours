@@ -2,7 +2,9 @@ import { requirePermission } from "@/features/identity/server/auth";
 import Link from "next/link";
 import { EnquiryStatusSelect } from "@/features/enquiry/components/admin/EnquiryStatusSelect";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { Pager } from "@/components/admin/Pager";
 import { listForAdmin } from "@/features/enquiry/server/enquiry.service";
+import { decodeCursor } from "@/lib/pagination";
 import { enquiryStatusEnum } from "@/server/db/schema";
 import { cn, formatDate } from "@/lib/utils";
 
@@ -17,12 +19,13 @@ const TOPIC: Record<string, string> = {
 export default async function EnquiriesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string }>;
+  searchParams: Promise<{ status?: string; after?: string }>;
 }) {
   await requirePermission("booking:view");
   const sp = await searchParams;
   const status = enquiryStatusEnum.enumValues.find((s) => s === sp.status);
-  const rows = await listForAdmin(status);
+  const after = decodeCursor(sp.after);
+  const { rows, nextCursor } = await listForAdmin({ status, after });
 
   return (
     <div className="mx-auto max-w-5xl">
@@ -50,13 +53,13 @@ export default async function EnquiriesPage({
       ) : (
         <ul className="mt-5 space-y-3">
           {rows.map(({ enquiry: e, productTitle }) => {
-            const wa = e.phone.replace(/\D/g, "");
+            const wa = e.customerPhone.replace(/\D/g, "");
             return (
               <li key={e.id} className="rounded-xl bg-white p-5">
                 <div className="flex flex-wrap items-start justify-between gap-3">
                   <div>
                     <p className="flex flex-wrap items-center gap-2">
-                      <b>{e.name}</b>
+                      <b>{e.customerName}</b>
                       <StatusBadge status={e.status} />
                       <span className="bg-lapis-tint text-lapis rounded-full px-2.5 py-0.5 text-xs font-semibold">
                         {TOPIC[e.topic] ?? e.topic}
@@ -75,10 +78,10 @@ export default async function EnquiriesPage({
                 <p className="mt-3 whitespace-pre-line">{e.message}</p>
                 <div className="mt-4 flex flex-wrap gap-2 text-sm">
                   <a
-                    href={`mailto:${e.email}?subject=${encodeURIComponent("Your request to WeCheapTours")}`}
+                    href={`mailto:${e.customerEmail}?subject=${encodeURIComponent("Your request to WeCheapTours")}`}
                     className="btn btn-ghost py-2"
                   >
-                    Reply to {e.email}
+                    Reply to {e.customerEmail}
                   </a>
                   {wa && (
                     <a
@@ -87,7 +90,7 @@ export default async function EnquiriesPage({
                       rel="noopener"
                       className="btn bg-faience py-2 text-white hover:bg-[#086a63]"
                     >
-                      WhatsApp {e.phone}
+                      WhatsApp {e.customerPhone}
                     </a>
                   )}
                 </div>
@@ -96,6 +99,7 @@ export default async function EnquiriesPage({
           })}
         </ul>
       )}
+      <Pager basePath="/admin/enquiries" params={{ status }} nextCursor={nextCursor} isFirstPage={!after} />
     </div>
   );
 }

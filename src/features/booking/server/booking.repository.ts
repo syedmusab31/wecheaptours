@@ -1,5 +1,6 @@
 import "server-only";
 import { and, asc, count, desc, eq, ilike, lt, or, sql, type SQL } from "drizzle-orm";
+import { ADMIN_PAGE_SIZE, toPage, type Cursor } from "@/lib/pagination";
 import { db, type Executor } from "@/server/db/client";
 import { bookingEvents, bookings, products, type Booking, type BookingStatus } from "@/server/db/schema";
 
@@ -17,6 +18,11 @@ export async function findByReference(reference: string) {
     .from(bookings)
     .leftJoin(products, eq(bookings.productId, products.id))
     .where(eq(bookings.reference, reference));
+  return row ?? null;
+}
+
+export async function findByIdempotencyKey(key: string) {
+  const [row] = await db.select().from(bookings).where(eq(bookings.idempotencyKey, key));
   return row ?? null;
 }
 
@@ -46,8 +52,17 @@ export async function countForProduct(productId: number, exec: Executor = db) {
 
 // ── Admin lists ─────────────────────────────────────────────────────────
 
-export async function listForAdmin(filters: { status?: BookingStatus; q?: string }, limit = 200) {
+/** Admin list, newest first, one page at a time (`after` = cursor from the previous page) */
+export async function listForAdmin(
+  filters: { status?: BookingStatus; q?: string; after?: Cursor | null },
+  limit = ADMIN_PAGE_SIZE,
+) {
   const where: SQL[] = [];
+  if (filters.after) {
+    where.push(
+      sql`(${bookings.createdAt}, ${bookings.id}) < (${filters.after.createdAt.toISOString()}::timestamptz, ${filters.after.id})`,
+    );
+  }
   if (filters.status) where.push(eq(bookings.status, filters.status));
   if (filters.q) {
     const like = `%${filters.q.replace(/[%_\\]/g, "")}%`;
@@ -60,12 +75,13 @@ export async function listForAdmin(filters: { status?: BookingStatus; q?: string
       )!,
     );
   }
-  return db
+  const rows = await db
     .select()
     .from(bookings)
     .where(where.length ? and(...where) : undefined)
-    .orderBy(desc(bookings.createdAt))
-    .limit(limit);
+    .orderBy(desc(bookings.createdAt), desc(bookings.id))
+    .limit(limit + 1);
+  return toPage(rows, limit, (b) => b);
 }
 
 export async function listRecent(limit = 8) {

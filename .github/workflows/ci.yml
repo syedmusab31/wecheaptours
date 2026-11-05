@@ -42,6 +42,15 @@ jobs:
           node-version: 22
           cache: npm
       - run: npm ci
+      # Fails when the schema changed but nobody ran `npm run db:generate` (an un-migrated change)
+      - name: Migrations match the schema
+        run: |
+          npx drizzle-kit generate --name ci-drift-check
+          if [ -n "$(git status --porcelain drizzle)" ]; then
+            echo "::error::The schema has changes without a migration. Run: npm run db:generate -- --name <what-changed>"
+            git status --porcelain drizzle
+            exit 1
+          fi
       - run: npm run lint
       - run: npm run typecheck
       - run: npm run format:check

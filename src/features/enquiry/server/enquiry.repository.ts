@@ -1,5 +1,6 @@
 import "server-only";
-import { count, desc, eq } from "drizzle-orm";
+import { and, count, desc, eq, sql } from "drizzle-orm";
+import { ADMIN_PAGE_SIZE, toPage, type Cursor } from "@/lib/pagination";
 import { db, type Executor } from "@/server/db/client";
 import { enquiries, products, type EnquiryStatus } from "@/server/db/schema";
 
@@ -19,14 +20,26 @@ export async function getEnquiryWithProduct(id: number) {
   return row ?? null;
 }
 
-export async function listForAdmin(status?: EnquiryStatus, limit = 200) {
-  return db
+/** Admin list, newest first, one page at a time (`after` = cursor from the previous page) */
+export async function listForAdmin(
+  filters: { status?: EnquiryStatus; after?: Cursor | null },
+  limit = ADMIN_PAGE_SIZE,
+) {
+  const rows = await db
     .select({ enquiry: enquiries, productTitle: products.title })
     .from(enquiries)
     .leftJoin(products, eq(enquiries.productId, products.id))
-    .where(status ? eq(enquiries.status, status) : undefined)
-    .orderBy(desc(enquiries.createdAt))
-    .limit(limit);
+    .where(
+      and(
+        filters.status ? eq(enquiries.status, filters.status) : undefined,
+        filters.after
+          ? sql`(${enquiries.createdAt}, ${enquiries.id}) < (${filters.after.createdAt.toISOString()}::timestamptz, ${filters.after.id})`
+          : undefined,
+      ),
+    )
+    .orderBy(desc(enquiries.createdAt), desc(enquiries.id))
+    .limit(limit + 1);
+  return toPage(rows, limit, (r) => r.enquiry);
 }
 
 export async function listLatest(limit = 5) {

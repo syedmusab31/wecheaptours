@@ -248,3 +248,78 @@ describeDb("payments", () => {
     expect(second).toMatchObject({ duplicate: true, booking: { paidCents: 10000 } });
   });
 });
+
+describeDb("booking.service: duplicate submits", () => {
+  beforeEach(resetDatabase);
+
+  it("returns the same booking for a repeated submit and takes the seats once", async () => {
+    const { createBooking, db, schema } = await services();
+    const product = await createProduct();
+    const [slot] = await db
+      .insert(schema.availabilitySlots)
+      .values({ productId: product.id, startsOn: isoInDays(10), capacity: 10 })
+      .returning();
+    const submit = {
+      ...guest,
+      productId: product.id,
+      travelDate: isoInDays(10),
+      idempotencyKey: crypto.randomUUID(),
+    };
+
+    const [a, b] = await Promise.all([createBooking(submit), createBooking(submit)]);
+    const c = await createBooking(submit);
+    expect(new Set([a.id, b.id, c.id]).size).toBe(1);
+    expect(await db.select().from(schema.bookings)).toHaveLength(1);
+    const [after] = await db
+      .select()
+      .from(schema.availabilitySlots)
+      .where(eq(schema.availabilitySlots.id, slot.id));
+    expect(after.reserved).toBe(3);
+    expect(await db.select().from(schema.jobs)).toHaveLength(1); // one confirmation email
+  });
+
+  it("refuses to hand a booking to a different email with the same key", async () => {
+    const { createBooking } = await services();
+    const product = await createProduct();
+    const submit = {
+      ...guest,
+      productId: product.id,
+      travelDate: isoInDays(10),
+      idempotencyKey: crypto.randomUUID(),
+    };
+    await createBooking(submit);
+    await expect(createBooking({ ...submit, email: "someone@else.com" })).rejects.toThrow(/reload the page/);
+  });
+
+  it("still makes separate bookings without a key", async () => {
+    const { createBooking, db, schema } = await services();
+    const product = await createProduct();
+    await createBooking({ ...guest, productId: product.id, travelDate: isoInDays(10) });
+    await createBooking({ ...guest, productId: product.id, travelDate: isoInDays(10) });
+    expect(await db.select().from(schema.bookings)).toHaveLength(2);
+  });
+});
+
+describeDb("admin lists: pagination", () => {
+  beforeEach(resetDatabase);
+
+  it("walks every booking exactly once, newest first", async () => {
+    const { createBooking } = await services();
+    const repo = await import("@/features/booking/server/booking.repository");
+    const { decodeCursor } = await import("@/lib/pagination");
+    const product = await createProduct();
+    const made = [];
+    for (let i = 0; i < 5; i++)
+      made.push(await createBooking({ ...guest, productId: product.id, travelDate: isoInDays(10) }));
+
+    const seen: number[] = [];
+    let after = null;
+    for (let page = 0; page < 5; page++) {
+      const result = await repo.listForAdmin({ after }, 2);
+      seen.push(...result.rows.map((b) => b.id));
+      if (!result.nextCursor) break;
+      after = decodeCursor(result.nextCursor);
+    }
+    expect(seen).toEqual(made.map((b) => b.id).reverse());
+  });
+});

@@ -115,7 +115,7 @@ export default async function Dashboard() {
                 {latestEnquiries.map((e) => (
                   <li key={e.id} className="text-sm">
                     <div className="flex items-center gap-2">
-                      <b className="truncate">{e.name}</b>
+                      <b className="truncate">{e.customerName}</b>
                       <StatusBadge status={e.status} />
                     </div>
                     <p className="text-ink-mute line-clamp-1">{e.message}</p>

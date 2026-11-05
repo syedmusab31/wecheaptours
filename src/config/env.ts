@@ -117,3 +117,20 @@ export const env: Env = new Proxy({} as Env, {
 export function resetEnvCache() {
   cached = undefined;
 }
+
+const databaseSchema = z.object({
+  DATABASE_URL: z.string().url("DATABASE_URL must be a postgres:// URL"),
+  DATABASE_CA_CERT: optional,
+  DATABASE_POOL_MAX: z.coerce.number().int().min(1).max(50).default(5),
+});
+
+/**
+ * Only the database settings. Migrations, the seed and admin scripts use this, so they run
+ * without the app's other secrets (SMTP, cron, auth).
+ */
+export function databaseEnv(source: Record<string, string | undefined> = process.env) {
+  const parsed = databaseSchema.safeParse(source);
+  if (!parsed.success)
+    throw new Error(`Invalid database settings: ${parsed.error.issues.map((i) => i.message).join("; ")}`);
+  return parsed.data;
+}

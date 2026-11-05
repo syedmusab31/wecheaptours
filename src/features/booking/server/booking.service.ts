@@ -105,6 +105,37 @@ export async function priceSelection(input: QuoteRequest, now = new Date()): Pro
  * the booking, its reservations, its first history event and the confirmation emails (as jobs).
  */
 export async function createBooking(input: CreateBookingInput, now = new Date()): Promise<Booking> {
+  // Same submit seen before (double-click, network retry): hand back that booking, change nothing
+  const repeat = await findRepeat(input);
+  if (repeat) return repeat;
+
+  try {
+    return await insertNewBooking(input, now);
+  } catch (err) {
+    // Two copies of one submit raced; the other one won. Its transaction holds the seats and promo use.
+    if (input.idempotencyKey && isUniqueViolation(err, "bookings_idempotency_key_unique")) {
+      const winner = await findRepeat(input);
+      if (winner) return winner;
+    }
+    throw err;
+  }
+}
+
+/** The booking an earlier copy of this submit created, if any. Only for the same guest email. */
+async function findRepeat(input: CreateBookingInput): Promise<Booking | null> {
+  if (!input.idempotencyKey) return null;
+  const existing = await bookingRepository.findByIdempotencyKey(input.idempotencyKey);
+  if (!existing) return null;
+  if (existing.customerEmail !== input.email)
+    throw new ValidationError("Please reload the page and try again.");
+  logger.info(
+    { event: "booking.duplicate_submit", reference: existing.reference },
+    "repeated booking submit",
+  );
+  return existing;
+}
+
+async function insertNewBooking(input: CreateBookingInput, now: Date): Promise<Booking> {
   const { product, option, quote: q, promo, addons } = await priceSelection(input, now);
   const { rates } = await getSettings();
   const displayCurrency = input.displayCurrency as Currency;
@@ -126,6 +157,7 @@ export async function createBooking(input: CreateBookingInput, now = new Date())
           bookingRepository.insertBooking(
             {
               reference: makeReference(),
+              idempotencyKey: input.idempotencyKey ?? null,
               productId: product.id,
               optionId: option?.id ?? null,
               customerId,

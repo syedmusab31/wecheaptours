@@ -3,7 +3,9 @@ import { can } from "@/features/identity/server/permissions";
 import Link from "next/link";
 import { Download } from "lucide-react";
 import { StatusBadge } from "@/components/admin/StatusBadge";
+import { Pager } from "@/components/admin/Pager";
 import { listForAdmin } from "@/features/booking/server/booking.service";
+import { decodeCursor } from "@/lib/pagination";
 import { bookingStatusEnum, type BookingStatus } from "@/server/db/schema";
 import { CATEGORY_META } from "@/features/catalog/catalog.constants";
 import { cn, formatDate } from "@/lib/utils";
@@ -12,7 +14,7 @@ import { formatCentsExact } from "@/lib/money";
 export default async function BookingsPage({
   searchParams,
 }: {
-  searchParams: Promise<{ status?: string; q?: string }>;
+  searchParams: Promise<{ status?: string; q?: string; after?: string }>;
 }) {
   const admin = await requirePermission("booking:view");
   const sp = await searchParams;
@@ -20,7 +22,8 @@ export default async function BookingsPage({
     ? (sp.status as BookingStatus)
     : undefined;
   const q = (sp.q ?? "").trim();
-  const rows = await listForAdmin({ status, q });
+  const after = decodeCursor(sp.after);
+  const { rows, nextCursor } = await listForAdmin({ status, q, after });
 
   return (
     <div className="mx-auto max-w-6xl">
@@ -109,6 +112,12 @@ export default async function BookingsPage({
         </table>
         {rows.length === 0 && <p className="text-ink-soft p-8 text-center">No bookings match.</p>}
       </div>
+      <Pager
+        basePath="/admin/bookings"
+        params={{ status, q: q || undefined }}
+        nextCursor={nextCursor}
+        isFirstPage={!after}
+      />
     </div>
   );
 }

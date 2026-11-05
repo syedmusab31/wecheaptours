@@ -33,6 +33,8 @@ export function CheckoutForm({
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
+  // One key per checkout: a double-click or a retry after a network error can't book twice
+  const [idempotencyKey] = useState(() => crypto.randomUUID());
   const [promoInput, setPromoInput] = useState("");
   const [promo, setPromo] = useState<{ code: string; discountCents: number; totalCents: number } | null>(
     null,
@@ -70,6 +72,7 @@ export function CheckoutForm({
         body: JSON.stringify({
           ...booking,
           promoCode: promo?.code ?? null,
+          idempotencyKey,
           displayCurrency: currency,
           customerName: f.get("name"),
           email: f.get("email"),

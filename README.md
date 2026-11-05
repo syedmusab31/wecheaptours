@@ -35,7 +35,7 @@ Needs Node.js 20+ and PostgreSQL (e.g. [Postgres.app](https://postgresapp.com) o
 ```bash
 cp .env.example .env          # then edit DATABASE_URL, AUTH_SECRET, ADMIN_EMAIL, ADMIN_PASSWORD
 npm install
-npm run db:setup              # creates the tables and loads the demo products (admin role: owner)
+npm run db:setup              # runs the migrations and loads the demo products (admin role: owner)
 npm run dev                   # http://localhost:3000  ·  admin: http://localhost:3000/admin
 ```
 
@@ -84,12 +84,27 @@ CI (`.github/workflows/ci.yml`) runs lint, typecheck, format check, unit + integ
 
 Environment variables are validated at startup by `src/config/env.ts`; see `.env.example` for the full list.
 
-### Upgrading an existing database
+### Database changes (migrations)
 
-Schema changes go through `npm run db:push`. A database created before the travel domain model (money in cents, countries, availability) needs one upgrade first, which backfills the new columns without losing data:
+The schema lives in `src/server/db/schema/`; every change to it ships as a SQL file in `drizzle/`, committed and reviewed like code.
 
 ```bash
-npm run db:upgrade
+# 1. change the schema in code, then write the migration and READ it before committing
+npm run db:generate -- --name add-pickup-notes
+# 2. apply it to your database
+npm run db:migrate
+```
+
+- `db:migrate` runs only the files the database hasn't seen, in order, and records each one. Deploys run it first (`vercel-build`), so production is migrated before the new code goes live. Give preview deployments their own database (Vercel's Neon integration creates a branch per preview), or they would migrate production.
+- If `db:generate` asks whether a column was renamed or replaced, answer carefully: "renamed" keeps the data. Data moves (backfills) can be added to the generated SQL by hand.
+- CI fails when the schema changed without a migration.
+- `db:push` still exists for quick local experiments. Never run it against production.
+
+**A database created before migrations existed** (with `db:push`) needs a one-time handover:
+
+```bash
+npm run db:upgrade    # only if it predates the travel domain model (cents, countries, availability)
+npm run db:baseline   # records the first migration as already applied
 ```
 
 ## Project map

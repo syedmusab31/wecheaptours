@@ -32,22 +32,26 @@ export const countries = pgTable("countries", {
   isActive: boolean("is_active").notNull().default(true),
 });
 
-export const destinations = pgTable("destinations", {
-  id: serial("id").primaryKey(),
-  slug: varchar("slug", { length: 80 }).notNull().unique(),
-  name: varchar("name", { length: 120 }).notNull(),
-  countryCode: char("country_code", { length: 2 })
-    .notNull()
-    .references(() => countries.code),
-  tagline: varchar("tagline", { length: 200 }).notNull().default(""),
-  description: text("description").notNull().default(""),
-  image: text("image").notNull().default(""),
-  /** Map position (WGS84). Without it the destination is listed under the map instead of pinned. */
-  latitude: doublePrecision("latitude"),
-  longitude: doublePrecision("longitude"),
-  sortOrder: integer("sort_order").notNull().default(0),
-  isActive: boolean("is_active").notNull().default(true),
-});
+export const destinations = pgTable(
+  "destinations",
+  {
+    id: serial("id").primaryKey(),
+    slug: varchar("slug", { length: 80 }).notNull().unique(),
+    name: varchar("name", { length: 120 }).notNull(),
+    countryCode: char("country_code", { length: 2 })
+      .notNull()
+      .references(() => countries.code),
+    tagline: varchar("tagline", { length: 200 }).notNull().default(""),
+    description: text("description").notNull().default(""),
+    image: text("image").notNull().default(""),
+    /** Map position (WGS84). Without it the destination is listed under the map instead of pinned. */
+    latitude: doublePrecision("latitude"),
+    longitude: doublePrecision("longitude"),
+    sortOrder: integer("sort_order").notNull().default(0),
+    isActive: boolean("is_active").notNull().default(true),
+  },
+  (t) => [index("destinations_name_trgm_idx").using("gin", t.name.op("gin_trgm_ops"))],
+);
 
 export const products = pgTable(
   "products",
@@ -99,6 +103,9 @@ export const products = pgTable(
     index("products_is_active_category_idx").on(t.isActive, t.category),
     index("products_is_active_is_featured_idx").on(t.isActive, t.isFeatured),
     index("products_tags_gin_idx").using("gin", t.tags),
+    // Trigram indexes (pg_trgm) make the search box's ILIKE '%word%' use an index instead of a full scan
+    index("products_title_trgm_idx").using("gin", t.title.op("gin_trgm_ops")),
+    index("products_summary_trgm_idx").using("gin", t.summary.op("gin_trgm_ops")),
   ],
 );
 

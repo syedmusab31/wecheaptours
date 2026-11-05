@@ -25,6 +25,8 @@ export const createBookingSchema = z.object({
   // Honeypot: real people never fill this in
   website: z.string().max(0).optional().or(z.literal("")),
   turnstileToken: z.string().max(4096).nullish(),
+  /** One per checkout attempt (a UUID made in the browser); repeats return the first booking */
+  idempotencyKey: z.string().uuid("Invalid request key").nullish(),
 });
 export type CreateBookingInput = z.infer<typeof createBookingSchema>;
 
