@@ -12,7 +12,7 @@
 import "dotenv/config";
 import { createHash } from "node:crypto";
 import { readFileSync } from "node:fs";
-import { createPool } from "@/server/db/pool";
+import { createDirectPool } from "@/server/db/pool";
 
 type Journal = { entries: { idx: number; when: number; tag: string }[] };
 
@@ -25,7 +25,7 @@ async function main() {
     .update(readFileSync(`drizzle/${baseline.tag}.sql`, "utf8"))
     .digest("hex");
 
-  const pool = createPool(process.env.DATABASE_URL, { max: 1 });
+  const pool = createDirectPool();
   try {
     const { rows: tables } = await pool.query(
       "select 1 from pg_tables where schemaname = 'public' and tablename = 'products'",

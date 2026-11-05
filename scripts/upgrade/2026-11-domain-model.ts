@@ -8,7 +8,7 @@
  * Safe to run more than once. Does nothing on a fresh database.
  */
 import "dotenv/config";
-import { createPool } from "@/server/db/pool";
+import { createDirectPool } from "@/server/db/pool";
 
 const STEPS: { name: string; sql: string }[] = [
   {
@@ -133,7 +133,7 @@ const STEPS: { name: string; sql: string }[] = [
 ];
 
 async function main() {
-  const pool = createPool(process.env.DATABASE_URL, { max: 1 });
+  const pool = createDirectPool();
   for (const step of STEPS) {
     await pool.query(step.sql);
     console.log(`✓ ${step.name}`);

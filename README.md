@@ -44,7 +44,7 @@ npm run dev                   # http://localhost:3000  ·  admin: http://localho
 ## Deploy to Vercel
 
 1. Push this folder to a GitHub repository and import it in Vercel.
-2. In the Vercel project: **Storage → Create Database → Neon (Postgres)**. This adds `DATABASE_URL`.
+2. In the Vercel project: **Storage → Create Database → Neon (Postgres)**. This adds `DATABASE_URL`. Make sure it is Neon's **pooled** address (the host contains `-pooler`, e.g. `ep-cool-name-123456-pooler.eu-central-1.aws.neon.tech`): every serverless instance opens its own connections, and the pooler (PgBouncer) shares a few real ones between them, so a traffic spike can't hit Postgres's connection limit. Migrations and the other `npm run db:*` / `admin:*` scripts automatically use the direct address, derived by dropping `-pooler`, because schema changes must not go through the pooler.
 3. Add the other environment variables from `.env.example` (Settings → Environment Variables). Set `NEXT_PUBLIC_SITE_URL` to your domain, e.g. `https://www.wecheaptours.com`, and a long random `AUTH_SECRET` (`openssl rand -base64 32`).
 4. Create the tables and demo data once, from your computer, pointing at the production database:
    ```bash

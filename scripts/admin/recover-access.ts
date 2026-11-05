@@ -12,7 +12,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { createPool } from "@/server/db/pool";
+import { createDirectPool } from "@/server/db/pool";
 import { adminUsers } from "@/server/db/schema";
 
 function arg(name: string) {
@@ -33,7 +33,7 @@ async function main() {
   if (!newEmail && !newPassword && !process.argv.includes("--activate"))
     throw new Error("Nothing to change.");
 
-  const pool = createPool(process.env.DATABASE_URL, { max: 1 });
+  const pool = createDirectPool();
   const db = drizzle(pool);
   const [user] = await db
     .update(adminUsers)

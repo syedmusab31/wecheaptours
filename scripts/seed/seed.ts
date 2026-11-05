@@ -2,7 +2,7 @@ import "dotenv/config";
 import bcrypt from "bcryptjs";
 import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
-import { createPool } from "@/server/db/pool";
+import { createDirectPool } from "@/server/db/pool";
 import { DEFAULT_RATES } from "@/lib/money";
 import { COORDINATES, DESTINATIONS } from "./data/destinations";
 import { PRODUCTS } from "./data/products";
@@ -30,7 +30,7 @@ const COUNTRIES = [
 const COUNTRY_CODE: Record<string, string> = Object.fromEntries(COUNTRIES.map((c) => [c.name, c.code]));
 
 async function main() {
-  const pool = createPool(process.env.DATABASE_URL, { max: 1 });
+  const pool = createDirectPool();
   const db = drizzle(pool, { schema });
 
   // Countries
