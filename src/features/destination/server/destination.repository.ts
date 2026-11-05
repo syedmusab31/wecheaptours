@@ -16,6 +16,8 @@ const destinationWithCountry = {
   tagline: destinations.tagline,
   description: destinations.description,
   image: destinations.image,
+  latitude: destinations.latitude,
+  longitude: destinations.longitude,
   sortOrder: destinations.sortOrder,
   isActive: destinations.isActive,
 };
@@ -28,6 +30,8 @@ export type DestinationView = {
   tagline: string;
   description: string;
   image: string;
+  latitude: number | null;
+  longitude: number | null;
   sortOrder: number;
   isActive: boolean;
 };

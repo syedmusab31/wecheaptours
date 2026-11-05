@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { DestinationView } from "@/features/destination/server/destination.service";
+import { SITE } from "@/config/site";
 import { groupBy } from "@/lib/collections";
 import type { ContactSettings } from "@/features/settings/server/settings.service";
 import { Logo } from "@/components/brand/Logo";
@@ -8,9 +9,11 @@ import { SubscribeForm } from "@/features/newsletter/components/SubscribeForm";
 export function SiteFooter({
   destinations,
   contact,
+  region,
 }: {
   destinations: DestinationView[];
   contact: ContactSettings;
+  region: string;
 }) {
   const byCountry = groupBy(destinations, (d) => d.country);
   const col = "space-y-2.5 text-[0.92rem] text-white/65";
@@ -34,7 +37,7 @@ export function SiteFooter({
             <div>
               <Logo light />
               <p className="mt-5 max-w-xs text-[0.92rem] leading-relaxed text-white/65">
-                Day trips, Nile cruises, transfers and stays across Egypt and Jordan, run by a local team.
+                {SITE.tagline(region)}
               </p>
               <ul className="mt-6 space-y-1.5 text-[0.92rem] text-white/65">
                 {contact.phone && <li>{contact.phone}</li>}

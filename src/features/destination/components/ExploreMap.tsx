@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 import {
   COUNTRY_LABELS,
   DEAD_SEA,
-  DEST_COORDS,
+  isOnMap,
   EGYPT,
   JORDAN,
   LABEL_SIDE,
@@ -30,6 +30,8 @@ export type MapPoint = {
   country: string;
   tagline: string;
   image: string;
+  latitude: number | null;
+  longitude: number | null;
   count: number;
   fromLabel: string | null;
 };
@@ -41,7 +43,11 @@ const PAD = 14;
  * Hover or focus a pin to preview it; the list underneath works the same way for touch and keyboard.
  */
 export function ExploreMap({ points, initial = "luxor" }: { points: MapPoint[]; initial?: string }) {
-  const placed = points.filter((p) => DEST_COORDS[p.slug]);
+  // Pinned when it has coordinates inside the drawn area; the rest are listed under the map
+  const placed = points.filter(
+    (p) => p.latitude != null && p.longitude != null && isOnMap(p.latitude, p.longitude),
+  );
+  const unplaced = points.filter((p) => !placed.includes(p));
   const [active, setActive] = useState(placed.find((p) => p.slug === initial)?.slug ?? placed[0]?.slug);
   const current = placed.find((p) => p.slug === active) ?? placed[0];
   if (!current) return null;
@@ -120,7 +126,7 @@ export function ExploreMap({ points, initial = "luxor" }: { points: MapPoint[]; 
           })}
 
           {placed.map((p) => {
-            const [x, y] = project(DEST_COORDS[p.slug]);
+            const [x, y] = project([p.latitude!, p.longitude!]);
             const on = p.slug === current.slug;
             const label = p.fromLabel ? `${p.name}  ${p.fromLabel}` : p.name;
             const w = label.length * 6.3 + 18;
@@ -217,6 +223,20 @@ export function ExploreMap({ points, initial = "luxor" }: { points: MapPoint[]; 
             </li>
           ))}
         </ul>
+        {unplaced.length > 0 && (
+          <p className="text-ink-soft mt-4 text-sm">
+            Also:{" "}
+            {unplaced.map((p, i) => (
+              <span key={p.slug}>
+                {i > 0 && " · "}
+                <Link href={`/destinations/${p.slug}`} className="text-lapis font-semibold hover:underline">
+                  {p.name}
+                </Link>
+                <span className="text-ink-mute">, {p.country}</span>
+              </span>
+            ))}
+          </p>
+        )}
       </div>
     </div>
   );

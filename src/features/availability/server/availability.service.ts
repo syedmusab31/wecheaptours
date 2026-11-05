@@ -82,7 +82,7 @@ export async function generateSlots(input: {
   from: string;
   to: string;
   capacity: number;
-  startTime: string | null;
+  startTime: string;
   weekdays: number[];
 }) {
   const days = nightsBetween(input.from, input.to) + 1;

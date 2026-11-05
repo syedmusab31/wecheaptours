@@ -18,6 +18,7 @@ import type { Category } from "@/server/db/schema";
 import { addDays, toISODate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { distinct } from "@/lib/collections";
+import { joinList } from "@/lib/text";
 
 type Dest = { slug: string; name: string; country: string };
 
@@ -52,7 +53,7 @@ const TABS: {
     label: "Packages",
     icon: Package,
     where: "Trip covers",
-    whereAll: "Egypt or Jordan",
+    whereAll: "", // filled from the destinations' countries below
     date: "Start",
   },
 ];
@@ -177,7 +178,9 @@ export function HeroSearch({
           <span className="min-w-0 flex-1">
             <span className={lab}>{tab.where}</span>
             <select value={where} onChange={(e) => setWhere(e.target.value)} className="bare-input truncate">
-              <option value="">{tab.whereAll}</option>
+              <option value="">
+                {tab.whereAll || joinList(distinct(destinations.map((d) => d.country)), "or") || "Anywhere"}
+              </option>
               {distinct(options.map((d) => d.country)).map((c) => {
                 const list = options.filter((d) => d.country === c);
                 if (!list.length) return null;

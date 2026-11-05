@@ -42,6 +42,29 @@ export function DestinationForm({
           />
         </label>
         <label className="block">
+          <span className="label">Latitude (map pin)</span>
+          <input
+            name="latitude"
+            inputMode="decimal"
+            defaultValue={d?.latitude ?? ""}
+            placeholder="25.69"
+            className="field tabular"
+          />
+        </label>
+        <label className="block">
+          <span className="label">Longitude (map pin)</span>
+          <input
+            name="longitude"
+            inputMode="decimal"
+            defaultValue={d?.longitude ?? ""}
+            placeholder="32.64"
+            className="field tabular"
+          />
+          <span className="text-ink-mute mt-1 block text-xs">
+            Right-click the place in Google Maps to copy both. Blank = listed under the map.
+          </span>
+        </label>
+        <label className="block">
           <span className="label">Order on the site</span>
           <input name="sortOrder" type="number" defaultValue={d?.sortOrder ?? 0} className="field tabular" />
         </label>

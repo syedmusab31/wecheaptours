@@ -2,6 +2,7 @@ import {
   boolean,
   char,
   date,
+  doublePrecision,
   index,
   integer,
   jsonb,
@@ -41,6 +42,9 @@ export const destinations = pgTable("destinations", {
   tagline: varchar("tagline", { length: 200 }).notNull().default(""),
   description: text("description").notNull().default(""),
   image: text("image").notNull().default(""),
+  /** Map position (WGS84). Without it the destination is listed under the map instead of pinned. */
+  latitude: doublePrecision("latitude"),
+  longitude: doublePrecision("longitude"),
   sortOrder: integer("sort_order").notNull().default(0),
   isActive: boolean("is_active").notNull().default(true),
 });

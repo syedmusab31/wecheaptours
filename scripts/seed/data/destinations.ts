@@ -1,5 +1,21 @@
 import { IMG } from "@/features/destination/destination-images";
 
+/** Map positions [latitude, longitude] for the demo destinations */
+export const COORDINATES: Record<string, [number, number]> = {
+  alexandria: [31.2, 29.92],
+  cairo: [30.06, 31.25],
+  giza: [29.98, 31.13],
+  luxor: [25.69, 32.64],
+  aswan: [24.09, 32.9],
+  hurghada: [27.26, 33.81],
+  "sharm-el-sheikh": [27.91, 34.33],
+  "marsa-alam": [25.07, 34.89],
+  amman: [31.95, 35.93],
+  petra: [30.33, 35.44],
+  "wadi-rum": [29.57, 35.42],
+  "dead-sea": [31.5, 35.58],
+};
+
 export const DESTINATIONS = [
   {
     slug: "giza",

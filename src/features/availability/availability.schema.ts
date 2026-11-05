@@ -1,9 +1,10 @@
 import { z } from "zod";
 import { formInt, formIntList, formText, isoDate } from "@/lib/validation";
+import { ANY_TIME } from "@/server/db/schema";
 
 const time = formText(
   z.union([z.string().regex(/^\d{2}:\d{2}$/, "Use HH:MM, e.g. 09:00"), z.literal("")]),
-).transform((s) => s || null);
+).transform((s) => (s ? `${s}:00` : ANY_TIME));
 
 export const generateSlotsSchema = z
   .object({

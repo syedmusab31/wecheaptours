@@ -9,7 +9,11 @@ import { productHref } from "@/lib/routes";
 import { IMG } from "@/features/destination/destination-images";
 import { formatMoney } from "@/lib/money";
 import { getAvailability, getByCategory, getFeatured } from "@/features/catalog/server/catalog.service";
-import { getDestinationFromPrices, getDestinations } from "@/features/destination/server/destination.service";
+import {
+  getDestinationFromPrices,
+  getDestinations,
+  getRegionLabel,
+} from "@/features/destination/server/destination.service";
 import { getLatestReviews, getReviewStats } from "@/features/review/server/review.service";
 import { getMoneyContext } from "@/features/settings/server/settings.service";
 
@@ -59,6 +63,7 @@ export default async function HomePage() {
     reviews,
     available,
     stats,
+    region,
   ] = await Promise.all([
     getMoneyContext(),
     getDestinations(),
@@ -71,6 +76,7 @@ export default async function HomePage() {
     getLatestReviews(3),
     getAvailability(),
     getReviewStats(),
+    getRegionLabel("&"),
   ]);
   const fmt = (usd: number) => formatMoney(usd, money.currency, money.rates);
 
@@ -82,6 +88,8 @@ export default async function HomePage() {
       country: d.country,
       tagline: d.tagline,
       image: d.image,
+      latitude: d.latitude,
+      longitude: d.longitude,
       count: fp?.count ?? 0,
       fromLabel: fp ? fmt(fp.minCents / 100) : null,
     };
@@ -146,7 +154,7 @@ export default async function HomePage() {
 
           <div className="mx-auto w-full max-w-[1260px] px-4 pb-6 sm:px-8 sm:pb-10">
             <h1 className="display rise max-w-4xl text-[3rem] sm:text-[4.6rem] lg:text-[6.2rem]">
-              Egypt &amp; Jordan,
+              {region},
               <br />
               for less.
             </h1>

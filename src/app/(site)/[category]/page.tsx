@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { SearchResults } from "@/features/catalog/components/SearchResults";
 import { categoryFromPath, CATEGORY_META } from "@/features/catalog/catalog.constants";
 import { parseSearchParams } from "@/features/catalog/search-params";
+import { getRegionLabel } from "@/features/destination/server/destination.service";
 
 type Props = {
   params: Promise<{ category: string }>;
@@ -20,7 +21,7 @@ const INTRO: Record<string, string> = {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const c = categoryFromPath((await params).category);
   if (!c) return {};
-  return { title: `${CATEGORY_META[c].plural} in Egypt & Jordan`, description: INTRO[c] };
+  return { title: `${CATEGORY_META[c].plural} in ${await getRegionLabel("&")}`, description: INTRO[c] };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -33,7 +34,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
       params={parsed}
       raw={raw}
       basePath={`/${CATEGORY_META[c].path}`}
-      heading={`${CATEGORY_META[c].plural} in Egypt & Jordan`}
+      heading={`${CATEGORY_META[c].plural} in ${await getRegionLabel("&")}`}
       intro={INTRO[c]}
       lockCategory={c}
     />

@@ -1,19 +1,20 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
 import "./globals.css";
+import { SITE } from "@/config/site";
+import { getRegionLabel } from "@/features/destination/server/destination.service";
 
 const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
-export const metadata: Metadata = {
-  metadataBase: new URL(site),
-  title: {
-    default: "WeCheapTours · Egypt & Jordan tours, cruises and transfers",
-    template: "%s · WeCheapTours",
-  },
-  description:
-    "Book day trips, Nile cruises, private transfers and vacation rentals across Egypt and Jordan. Clear prices, free cancellation and local support on WhatsApp.",
-  openGraph: { siteName: "WeCheapTours", type: "website" },
-};
+export async function generateMetadata(): Promise<Metadata> {
+  const [amp, and] = await Promise.all([getRegionLabel("&"), getRegionLabel("and")]);
+  return {
+    metadataBase: new URL(site),
+    title: { default: `${SITE.name} · ${amp} tours, cruises and transfers`, template: `%s · ${SITE.name}` },
+    description: SITE.description(and),
+    openGraph: { siteName: SITE.name, type: "website" },
+  };
+}
 
 export const viewport: Viewport = { themeColor: "#2340b0" };
 

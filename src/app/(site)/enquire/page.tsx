@@ -3,11 +3,12 @@ import { Mail, MessageCircle, Phone } from "lucide-react";
 import { EnquiryForm } from "@/features/enquiry/components/EnquiryForm";
 import { getProductTitle } from "@/features/catalog/server/catalog.service";
 import { getSettings } from "@/features/settings/server/settings.service";
+import { getRegionLabel } from "@/features/destination/server/destination.service";
 
-export const metadata: Metadata = {
+export const generateMetadata = async (): Promise<Metadata> => ({
   title: "Contact us",
-  description: "Ask a question, plan a custom trip or request concierge help in Egypt and Jordan.",
-};
+  description: `Ask a question, plan a custom trip or request concierge help in ${await getRegionLabel()}.`,
+});
 
 const MESSAGES: Record<string, string> = {
   package: "We'd like a trip of about … days, visiting …",

@@ -65,6 +65,28 @@ const STEPS: { name: string; sql: string }[] = [
       end $$;`,
   },
   {
+    name: "destinations.latitude / longitude (map pins)",
+    sql: `
+      alter table destinations add column if not exists latitude double precision;
+      alter table destinations add column if not exists longitude double precision;
+      update destinations d set latitude = v.lat, longitude = v.lon
+        from (values ('alexandria', 31.2, 29.92), ('cairo', 30.06, 31.25), ('giza', 29.98, 31.13), ('luxor', 25.69, 32.64), ('aswan', 24.09, 32.9), ('hurghada', 27.26, 33.81), ('sharm-el-sheikh', 27.91, 34.33), ('marsa-alam', 25.07, 34.89), ('amman', 31.95, 35.93), ('petra', 30.33, 35.44), ('wadi-rum', 29.57, 35.42), ('dead-sea', 31.5, 35.58)) as v(slug, lat, lon)
+        where d.slug = v.slug and d.latitude is null;`,
+  },
+  {
+    name: "availability_slots.start_time not null (00:00 = any time)",
+    sql: `
+      do $$ begin
+        if exists (select 1 from information_schema.columns
+                   where table_name = 'availability_slots' and column_name = 'start_time' and is_nullable = 'YES') then
+          update availability_slots set start_time = '00:00:00' where start_time is null;
+          alter table availability_slots alter column start_time set default '00:00:00', alter column start_time set not null;
+          alter table availability_slots drop constraint if exists availability_slots_product_date_time_uq;
+          alter table availability_slots add constraint availability_slots_product_date_time_uq unique (product_id, starts_on, start_time);
+        end if;
+      end $$;`,
+  },
+  {
     name: "drop legacy columns (data is now in the new ones)",
     sql: `
       do $$ begin

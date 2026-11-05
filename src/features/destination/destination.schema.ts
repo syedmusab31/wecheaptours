@@ -3,6 +3,22 @@ import { slugify } from "@/lib/utils";
 import { formCheckbox, formInt, formText } from "@/lib/validation";
 import { formImageList } from "@/features/catalog/catalog.schema";
 
+/** Decimal degrees, e.g. 25.69; blank = not on the map */
+const formCoordinate = (min: number, max: number, label: string) =>
+  z.preprocess(
+    (v) => {
+      const t = String(v ?? "")
+        .trim()
+        .replace(",", ".");
+      return t === "" ? null : Number(t);
+    },
+    z
+      .number({ invalid_type_error: `${label} must be a number, e.g. 25.69` })
+      .min(min, `${label} must be between ${min} and ${max}`)
+      .max(max, `${label} must be between ${min} and ${max}`)
+      .nullable(),
+  );
+
 export const destinationFormSchema = z
   .object({
     id: formInt(0),
@@ -12,8 +28,13 @@ export const destinationFormSchema = z
     tagline: formText(z.string().max(200)),
     description: formText(z.string().max(20_000)),
     images: formImageList(),
+    latitude: formCoordinate(-90, 90, "Latitude"),
+    longitude: formCoordinate(-180, 180, "Longitude"),
     sortOrder: formInt(0),
     isActive: formCheckbox(),
+  })
+  .refine((d) => (d.latitude === null) === (d.longitude === null), {
+    message: "Enter both latitude and longitude, or neither.",
   })
   .transform(({ images, ...d }) => ({ ...d, slug: d.slug || slugify(d.name), image: images?.[0] ?? "" }))
   .refine((d) => /^[a-z0-9-]+$/.test(d.slug), {

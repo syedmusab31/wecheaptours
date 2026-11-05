@@ -1,15 +1,16 @@
 import { SiteFooter } from "@/components/layout/SiteFooter";
 import { SiteHeader } from "@/components/layout/SiteHeader";
-import { getDestinations } from "@/features/destination/server/destination.service";
+import { getDestinations, getRegionLabel } from "@/features/destination/server/destination.service";
 import { getCurrency, getSettings } from "@/features/settings/server/settings.service";
 
 export const dynamic = "force-dynamic";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [settings, currency, destinations] = await Promise.all([
+  const [settings, currency, destinations, region] = await Promise.all([
     getSettings(),
     getCurrency(),
     getDestinations(),
+    getRegionLabel(),
   ]);
   return (
     <>
@@ -26,7 +27,7 @@ export default async function SiteLayout({ children }: { children: React.ReactNo
       )}
       <SiteHeader currency={currency} whatsapp={settings.contact.whatsapp} />
       <main id="main">{children}</main>
-      <SiteFooter destinations={destinations} contact={settings.contact} />
+      <SiteFooter destinations={destinations} contact={settings.contact} region={region} />
     </>
   );
 }

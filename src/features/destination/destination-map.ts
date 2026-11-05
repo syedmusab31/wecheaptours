@@ -205,20 +205,10 @@ export const LAKE_NASSER = path([
 ]);
 
 /** Pin positions for seeded destinations, by slug. New destinations without an entry simply don't get a pin. */
-export const DEST_COORDS: Record<string, LL> = {
-  alexandria: [31.2, 29.92],
-  cairo: [30.06, 31.25],
-  giza: [29.98, 31.13],
-  luxor: [25.69, 32.64],
-  aswan: [24.09, 32.9],
-  hurghada: [27.26, 33.81],
-  "sharm-el-sheikh": [27.91, 34.33],
-  "marsa-alam": [25.07, 34.89],
-  amman: [31.95, 35.93],
-  petra: [30.33, 35.44],
-  "wadi-rum": [29.57, 35.42],
-  "dead-sea": [31.5, 35.58],
-};
+/** True when a point falls inside the drawn area (Egypt and Jordan) */
+export function isOnMap(lat: number, lon: number): boolean {
+  return lat >= VIEW.latMin && lat <= VIEW.latMax && lon >= VIEW.lonMin && lon <= VIEW.lonMax;
+}
 
 /** Which side of the pin the price label sits, so neighbours don't collide */
 export const LABEL_SIDE: Record<string, "left" | "right"> = {

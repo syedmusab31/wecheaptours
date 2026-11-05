@@ -4,7 +4,7 @@ import { eq, sql } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/node-postgres";
 import { createPool } from "@/server/db/pool";
 import { DEFAULT_RATES } from "@/lib/money";
-import { DESTINATIONS } from "./data/destinations";
+import { COORDINATES, DESTINATIONS } from "./data/destinations";
 import { PRODUCTS } from "./data/products";
 import { DEMO_REVIEWS } from "./data/reviews";
 import * as schema from "@/server/db/schema";
@@ -40,14 +40,17 @@ async function main() {
   // Destinations (upsert by slug)
   for (const [i, { country, ...d }] of DESTINATIONS.entries()) {
     const countryCode = COUNTRY_CODE[country];
+    const [latitude, longitude] = COORDINATES[d.slug] ?? [null, null];
     await db
       .insert(destinations)
-      .values({ ...d, countryCode, sortOrder: i })
+      .values({ ...d, countryCode, latitude, longitude, sortOrder: i })
       .onConflictDoUpdate({
         target: destinations.slug,
         set: {
           name: d.name,
           countryCode,
+          latitude,
+          longitude,
           tagline: d.tagline,
           description: d.description,
           image: d.image,

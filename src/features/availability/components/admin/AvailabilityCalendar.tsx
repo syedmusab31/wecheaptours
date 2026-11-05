@@ -125,7 +125,7 @@ export function SlotCalendar({ productId, slots }: { productId: number; slots: A
                   >
                     <b className="block text-sm">
                       {WEEKDAYS[new Date(`${s.startsOn}T12:00:00`).getDay()]} {Number(s.startsOn.slice(8))}
-                      {s.startTime ? ` · ${s.startTime.slice(0, 5)}` : ""}
+                      {s.startTime !== "00:00:00" ? ` · ${s.startTime.slice(0, 5)}` : ""}
                     </b>
                     <span className="tabular">
                       {s.reserved}/{s.capacity} booked

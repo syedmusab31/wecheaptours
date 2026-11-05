@@ -1,5 +1,7 @@
 import "server-only";
 import { CACHE_TAGS, cached } from "@/server/cache";
+import { SITE } from "@/config/site";
+import { joinList } from "@/lib/text";
 import { isForeignKeyViolation, isUniqueViolation } from "@/server/db/errors";
 import { ConflictError, NotFoundError, ValidationError } from "@/server/errors";
 import type { CountryFormInput, DestinationFormInput } from "../destination.schema";
@@ -40,6 +42,18 @@ const fromPrices = cached(
   "destinations:from-prices",
   { tags },
 );
+const activeCountryNames = cached(
+  async () => (await destinationRepository.listCountries({ activeOnly: true })).map((c) => c.name),
+  "countries:active-names",
+  { tags },
+);
+
+/** "Egypt and Jordan" (or "Egypt & Jordan", "Egypt or Jordan"), built from the active countries */
+export async function getRegionLabel(conjunction: "and" | "or" | "&" = "and"): Promise<string> {
+  const names = await activeCountryNames();
+  return names.length ? joinList(names, conjunction) : SITE.fallbackRegion;
+}
+
 /** Lowest price and product count per destination id */
 export async function getDestinationFromPrices() {
   return new Map(await fromPrices());

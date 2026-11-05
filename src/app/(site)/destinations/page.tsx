@@ -2,15 +2,19 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import Link from "next/link";
 import { formatCents } from "@/lib/money";
-import { getDestinationFromPrices, getDestinations } from "@/features/destination/server/destination.service";
+import {
+  getDestinationFromPrices,
+  getDestinations,
+  getRegionLabel,
+} from "@/features/destination/server/destination.service";
 import { getMoneyContext } from "@/features/settings/server/settings.service";
 import { distinct } from "@/lib/collections";
 
-export const metadata: Metadata = {
-  title: "Destinations in Egypt & Jordan",
+export const generateMetadata = async (): Promise<Metadata> => ({
+  title: `Destinations in ${await getRegionLabel("&")}`,
   description:
     "Cairo, Giza, Luxor, Aswan, the Red Sea, Petra, Wadi Rum and the Dead Sea: trips, transfers and stays in each.",
-};
+});
 
 export default async function DestinationsPage() {
   const [destinations, prices, money] = await Promise.all([
