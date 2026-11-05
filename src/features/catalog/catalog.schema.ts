@@ -6,10 +6,19 @@ import { categoryEnum, priceUnitEnum, type ItineraryStep } from "@/server/db/sch
 /** Hosts we serve images from (see next.config.ts `images.remotePatterns`) */
 export const IMAGE_HOSTS = ["res.cloudinary.com", "images.unsplash.com"];
 
-export function isAllowedImageUrl(url: string): boolean {
+/**
+ * Cloudinary images must come from our own account (when it is configured), so photos from
+ * someone else's account can't be pasted in. Unsplash stays allowed for the demo photos.
+ */
+export function isAllowedImageUrl(
+  url: string,
+  cloudName = process.env.NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME,
+): boolean {
   try {
     const u = new URL(url);
-    return u.protocol === "https:" && IMAGE_HOSTS.includes(u.hostname);
+    if (u.protocol !== "https:" || !IMAGE_HOSTS.includes(u.hostname)) return false;
+    if (u.hostname === "res.cloudinary.com" && cloudName) return u.pathname.startsWith(`/${cloudName}/`);
+    return true;
   } catch {
     return false;
   }
@@ -27,7 +36,11 @@ export const formImageList = () =>
       }
     },
     z
-      .array(z.string().refine(isAllowedImageUrl, "Images must be Cloudinary or Unsplash links."))
+      .array(
+        z
+          .string()
+          .refine((u) => isAllowedImageUrl(u), "Images must be uploaded here (or be Unsplash links)."),
+      )
       .max(30, { message: "Up to 30 photos per product." })
       .nullable()
       .refine((v) => v !== null, "Images could not be read. Remove and add them again."),

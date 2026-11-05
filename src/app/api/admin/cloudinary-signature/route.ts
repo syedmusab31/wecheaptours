@@ -29,11 +29,30 @@ export async function POST() {
   }
   const folder = env.CLOUDINARY_FOLDER;
   const timestamp = Math.floor(Date.now() / 1000);
-  // Signed upload parameters (alphabetical): Cloudinary rejects files outside these formats.
+  // Signed upload parameters, in alphabetical order. Cloudinary rejects files outside these formats;
+  // the upload preset (set up in Cloudinary) adds the 10 MB limit and resizing, and the browser can't drop it.
   const allowedFormats = "avif,jpg,jpeg,png,webp";
-  const toSign = `allowed_formats=${allowedFormats}&folder=${folder}&timestamp=${timestamp}`;
+  const uploadPreset = env.CLOUDINARY_UPLOAD_PRESET;
+  const params: Record<string, string> = {
+    allowed_formats: allowedFormats,
+    folder,
+    timestamp: String(timestamp),
+  };
+  if (uploadPreset) params.upload_preset = uploadPreset;
+  const toSign = Object.keys(params)
+    .sort()
+    .map((k) => `${k}=${params[k]}`)
+    .join("&");
   const signature = createHash("sha1")
     .update(toSign + apiSecret)
     .digest("hex");
-  return NextResponse.json({ cloudName, apiKey, timestamp, folder, allowedFormats, signature });
+  return NextResponse.json({
+    cloudName,
+    apiKey,
+    timestamp,
+    folder,
+    allowedFormats,
+    uploadPreset: uploadPreset ?? null,
+    signature,
+  });
 }

@@ -4,6 +4,7 @@ import { expireStalePending } from "@/features/booking/server/booking.service";
 import { applyRetentionPolicy } from "@/features/customer/server/retention.repository";
 import { syncExchangeRates } from "@/features/settings/server/fx.service";
 import { addDays, toISODate } from "@/lib/dates";
+import { pruneChallenges } from "@/features/identity/server/login-challenge.repository";
 import { pruneFinishedJobs } from "@/server/jobs/queue";
 import { logger } from "@/server/logger";
 import { pruneRateLimits } from "@/server/security/rate-limit";
@@ -38,5 +39,6 @@ export function runWeekly() {
     retention: () => applyRetentionPolicy(),
     rateLimitRowsPruned: () => pruneRateLimits(),
     finishedJobsPruned: () => pruneFinishedJobs(30),
+    loginChallengesPruned: () => pruneChallenges(),
   });
 }

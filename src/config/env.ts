@@ -39,6 +39,8 @@ const schema = z
     CLOUDINARY_API_KEY: optional,
     CLOUDINARY_API_SECRET: optional,
     CLOUDINARY_FOLDER: z.string().default("wecheaptours"),
+    /** Signed upload preset with a size limit and allowed formats (set up in Cloudinary → Settings → Upload) */
+    CLOUDINARY_UPLOAD_PRESET: optional,
 
     STRIPE_SECRET_KEY: optional,
     STRIPE_WEBHOOK_SECRET: optional,
@@ -70,6 +72,14 @@ const schema = z
         code: "custom",
         path: ["STRIPE_WEBHOOK_SECRET"],
         message: "Set both STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET, or neither",
+      });
+    }
+    if (e.NODE_ENV === "production" && !e.SMTP_HOST) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["SMTP_HOST"],
+        message:
+          "SMTP_HOST is required in production: admins sign in with an emailed code (for local testing run `npm run mail:dev`)",
       });
     }
     if (e.NODE_ENV === "production" && !e.CRON_SECRET) {

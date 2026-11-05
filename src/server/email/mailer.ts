@@ -31,6 +31,8 @@ export async function sendMail(to: string, subject: string, html: string, replyT
   if (!to) return;
   const t = getTransporter();
   if (!t) {
+    // Env validation requires SMTP in production; never write email bodies (sign-in codes) to production logs
+    if (env.NODE_ENV === "production") throw new Error("SMTP is not configured");
     logger.info(
       {
         event: "email.dev",

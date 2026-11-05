@@ -30,7 +30,7 @@ import type {
 } from "./catalog";
 import type { customers } from "./customers";
 import type { enquiries, enquiryStatusEnum, reviews } from "./engagement";
-import type { adminRoleEnum, adminUsers } from "./identity";
+import type { adminRoleEnum, adminUsers, loginChallenges } from "./identity";
 import type { jobs } from "./system";
 
 export type Country = typeof countries.$inferSelect;
@@ -58,3 +58,4 @@ export type PaymentKind = (typeof paymentKindEnum.enumValues)[number];
 export type EnquiryStatus = (typeof enquiryStatusEnum.enumValues)[number];
 export type AdminRole = (typeof adminRoleEnum.enumValues)[number];
 export type AdminUser = typeof adminUsers.$inferSelect;
+export type LoginChallenge = typeof loginChallenges.$inferSelect;

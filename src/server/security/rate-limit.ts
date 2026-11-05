@@ -16,6 +16,8 @@ export const RATE_LIMITS = {
   enquiry: [{ limit: 5, windowSeconds: 60 * 60, scope: "ip" }],
   subscribe: [{ limit: 5, windowSeconds: 60 * 60, scope: "ip" }],
   bookingLookup: [{ limit: 10, windowSeconds: 60 * 60, scope: "ip" }],
+  otpVerify: [{ limit: 20, windowSeconds: 15 * 60, scope: "ip" }],
+  otpResend: [{ limit: 3, windowSeconds: 15 * 60, scope: "ip+subject" }],
 } satisfies Record<string, Rule[]>;
 
 export type RateLimitAction = keyof typeof RATE_LIMITS;
@@ -55,6 +57,15 @@ export async function enforceRateLimit(action: RateLimitAction, ip: string, subj
       return;
     }
     if (result.count > rule.limit) throw new RateLimitError(result.resetIn);
+  }
+}
+
+/** Counts an event in a fixed window and returns how many happened so far (for alerts, not blocking) */
+export async function countEvent(key: string, windowSeconds: number): Promise<number> {
+  try {
+    return (await hit(key.slice(0, 200), windowSeconds)).count;
+  } catch {
+    return 0;
   }
 }
 

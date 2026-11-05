@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
+import { Turnstile } from "@/components/ui/Turnstile";
 
 export function SubscribeForm() {
   const [email, setEmail] = useState("");
@@ -9,13 +10,14 @@ export function SubscribeForm() {
     status: "idle",
   });
 
-  async function submit(e: React.FormEvent) {
+  async function submit(e: React.FormEvent<HTMLFormElement>) {
     e.preventDefault();
+    const turnstileToken = new FormData(e.currentTarget).get("cf-turnstile-response");
     setState({ status: "sending" });
     const res = await fetch("/api/subscribe", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email }),
+      body: JSON.stringify({ email, turnstileToken }),
     }).catch(() => null);
     const data = res ? await res.json().catch(() => ({})) : {};
     if (res?.ok) setState({ status: "done" });
@@ -58,6 +60,9 @@ export function SubscribeForm() {
           {state.msg}
         </p>
       )}
+      <div className="mt-2">
+        <Turnstile />
+      </div>
     </form>
   );
 }

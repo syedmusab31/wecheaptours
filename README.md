@@ -54,6 +54,8 @@ npm run dev                   # http://localhost:3000  ·  admin: http://localho
 
 ### Cloudinary
 
+For upload limits, create a **signed** upload preset in Cloudinary (Settings → Upload) with a 10 MB maximum file size and the formats jpg, png, webp, avif, and put its name in `CLOUDINARY_UPLOAD_PRESET`. Images saved on products must come from your own Cloudinary account (or Unsplash, for the demo photos).
+
 Create a free account, then copy **Cloud name**, **API key** and **API secret** into `NEXT_PUBLIC_CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET`. Uploads are signed by the server, so the secret never reaches the browser.
 
 ### Email
@@ -117,7 +119,8 @@ tests/integration/     service tests against a real Postgres
 - **Logs:** structured JSON (pino) with request IDs; guest emails and phones are redacted.
 - **Errors:** Sentry when `SENTRY_DSN` / `NEXT_PUBLIC_SENTRY_DSN` are set; reports are scrubbed of booking tokens, emails and phone numbers.
 - **Health:** `GET /api/health` returns 503 when the database is down or jobs have waited over 10 minutes.
-- **Security:** rate limits on login, bookings, enquiries, subscribe and booking lookup; nonce-based CSP and security headers; revocable admin sessions with owner / manager / agent roles.
+- **Security:** rate limits on login, bookings, enquiries, subscribe and booking lookup; Turnstile on public forms (when keys are set); nonce-based CSP and security headers; revocable admin sessions with owner / manager / agent roles; an email alert to the account and the owners after 10 failed sign-ins in an hour.
+- **Two-step sign-in:** every admin sign-in needs a 6-digit code emailed to the account (5 tries, 10 minutes, only a hash is stored). "Remember this device" skips it for 30 days until the password changes or "Sign out everywhere" is used. Because of this, production refuses to start without SMTP. Locked out (e.g. the owner lost their mailbox)? From a machine with the production `DATABASE_URL`: `npm run admin:recover -- owner@old.com --email you@new.com`.
 
 ## Payments
 

@@ -9,6 +9,14 @@ export const loginSchema = z.object({
   password: z.string().min(1).max(200),
 });
 
+export const verifyCodeSchema = z.object({
+  code: z
+    .string()
+    .trim()
+    .regex(/^\d{3}\s?\d{3}$/, "Enter the 6-digit code from the email."),
+  rememberDevice: z.boolean().default(false),
+});
+
 export const changePasswordSchema = z.object({
   current: formText(z.string().min(1, "Enter your current password.")),
   next: formText(

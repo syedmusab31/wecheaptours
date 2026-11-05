@@ -29,6 +29,11 @@ jobs:
       AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
       CRON_SECRET: ci-only-cron-secret-0123456789abcdef0123456789
       NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      # Production builds require SMTP (admins sign in with emailed codes); nothing is sent in CI
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_USER: ci
+      SMTP_PASSWORD: ci
       NEXT_TELEMETRY_DISABLED: "1"
     steps:
       - uses: actions/checkout@v4

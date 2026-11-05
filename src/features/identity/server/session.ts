@@ -76,3 +76,37 @@ export const sessionCookieOptions = {
 
 /** Same attributes as when the cookie was set, so browsers reliably remove it */
 export const clearSessionCookieOptions = { ...sessionCookieOptions, maxAge: 0 };
+
+// ── Two-step sign-in ────────────────────────────────────────────────────
+
+/** Holds the pending challenge id between the password step and the code step */
+export const CHALLENGE_COOKIE = "wct_2fa";
+export const challengeCookieOptions = { ...sessionCookieOptions, maxAge: 10 * 60 };
+
+/** "Remember this device": skips the emailed code for 30 days, until the user's sessions are revoked */
+export const TRUSTED_DEVICE_COOKIE = "wct_trusted";
+export const TRUSTED_DEVICE_MAX_AGE = 60 * 60 * 24 * 30;
+export const trustedDeviceCookieOptions = { ...sessionCookieOptions, maxAge: TRUSTED_DEVICE_MAX_AGE };
+
+export async function signTrustedDevice(p: { sub: string; ver: number }): Promise<string> {
+  return new SignJWT({ ver: p.ver, purpose: "trusted-device" })
+    .setProtectedHeader({ alg: "HS256" })
+    .setSubject(p.sub)
+    .setIssuedAt()
+    .setExpirationTime(`${TRUSTED_DEVICE_MAX_AGE}s`)
+    .sign(key());
+}
+
+/** The trusted device's admin id and session version, or null */
+export async function verifyTrustedDevice(
+  token: string | undefined,
+): Promise<{ sub: string; ver: number } | null> {
+  if (!token) return null;
+  try {
+    const { payload } = await jwtVerify(token, key(), { algorithms: ["HS256"] });
+    if (payload.purpose !== "trusted-device" || !payload.sub || typeof payload.ver !== "number") return null;
+    return { sub: payload.sub, ver: payload.ver };
+  } catch {
+    return null;
+  }
+}

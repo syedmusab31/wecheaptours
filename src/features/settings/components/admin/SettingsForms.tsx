@@ -259,7 +259,8 @@ export function SignOutEverywhere() {
     <form action={signOutEverywhere} className="rounded-xl bg-white p-6">
       <h2 className="font-bold">Sessions</h2>
       <p className="text-ink-mute mt-1 text-sm">
-        Signs you out on every device, including this one. Use it if a device was lost.
+        Signs you out on every device, including this one, and forgets remembered devices. Use it if a device
+        was lost. Two-step sign-in is on for every account: each sign-in needs a code emailed to that account.
       </p>
       <SubmitButton className="mt-3" pendingText="Signing out…">
         Sign out everywhere

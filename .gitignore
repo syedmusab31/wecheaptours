@@ -25,3 +25,6 @@ coverage
 .idea
 .vscode
 .DS_Store
+
+# development mail catcher (npm run mail:dev)
+.mail-sink

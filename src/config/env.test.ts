@@ -16,7 +16,10 @@ describe("validateEnv", () => {
     expect(() => validateEnv({ ...base, SMTP_HOST: "smtp.x.com" })).toThrow(/SMTP_USER/);
     expect(() => validateEnv({ ...base, STRIPE_SECRET_KEY: "sk_test" })).toThrow(/STRIPE_WEBHOOK_SECRET/);
   });
-  it("requires CRON_SECRET in production", () => {
+  it("requires CRON_SECRET and SMTP in production", () => {
     expect(() => validateEnv({ ...base, NODE_ENV: "production" })).toThrow(/CRON_SECRET/);
+    expect(() => validateEnv({ ...base, NODE_ENV: "production" })).toThrow(
+      /SMTP_HOST is required in production/,
+    );
   });
 });

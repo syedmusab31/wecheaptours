@@ -49,3 +49,9 @@ export class RateLimitError extends AppError {
     super("Too many attempts. Please wait a moment and try again.", 429, "rate_limited");
   }
 }
+
+export class ServiceUnavailableError extends AppError {
+  constructor(message: string) {
+    super(message, 503, "unavailable");
+  }
+}
