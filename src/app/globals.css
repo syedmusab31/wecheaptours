@@ -1,0 +1,258 @@
+@import "tailwindcss";
+@import "@fontsource-variable/archivo/wdth.css";
+
+/*
+  WeCheapTours design tokens (v2)
+  Ink       #0F1B33  night-blue text
+  Lapis     #2443C8  primary actions (Egyptian lapis lazuli)
+  Faience   #0B7F77  positive states: free cancellation, confirmed
+  Sunstone  #FFB627  price stamps, the active pin, deals
+  Mist      #F3F6FB  quiet surfaces
+  Line      #E2E8F1  hairlines
+*/
+@theme {
+  --font-sans: "Archivo Variable", "Archivo", ui-sans-serif, system-ui, sans-serif;
+
+  --color-ink: #0f1b33;
+  --color-ink-soft: #46546f;
+  --color-ink-mute: #6d7a93;
+  --color-lapis: #2443c8;
+  --color-lapis-deep: #1b35a3;
+  --color-lapis-tint: #e8edfc;
+  --color-faience: #0b7f77;
+  --color-faience-tint: #e1f4f1;
+  --color-sun: #ffb627;
+  --color-sun-tint: #fff4dc;
+  --color-mist: #f3f6fb;
+  --color-line: #e2e8f1;
+  --color-danger: #b42318;
+  --color-danger-tint: #fdecea;
+
+  --radius-card: 20px;
+  --radius-panel: 28px;
+
+  --shadow-float: 0 1px 2px rgb(15 27 51 / 0.06), 0 12px 32px -8px rgb(15 27 51 / 0.18);
+  --shadow-lift: 0 1px 2px rgb(15 27 51 / 0.05), 0 6px 18px -6px rgb(15 27 51 / 0.12);
+
+  --ease-out-soft: cubic-bezier(0.2, 0.7, 0.2, 1);
+}
+
+@layer base {
+  html {
+    color: var(--color-ink);
+    background: #fff;
+    font-family: var(--font-sans);
+    font-variation-settings: "wdth" 100;
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
+    scroll-behavior: smooth;
+  }
+  body {
+    min-height: 100dvh;
+  }
+  ::selection {
+    background: var(--color-sun);
+    color: var(--color-ink);
+  }
+  :focus-visible {
+    outline: 2px solid var(--color-lapis);
+    outline-offset: 3px;
+    border-radius: 6px;
+  }
+  input,
+  select,
+  textarea {
+    font: inherit;
+  }
+  @media (prefers-reduced-motion: reduce) {
+    *,
+    *::before,
+    *::after {
+      animation-duration: 0.01ms !important;
+      transition-duration: 0.01ms !important;
+      scroll-behavior: auto !important;
+    }
+  }
+}
+
+@layer components {
+  /* Archivo's width axis carries the voice: wide for display, normal for reading */
+  .display {
+    font-variation-settings: "wdth" 116;
+    font-weight: 720;
+    letter-spacing: -0.035em;
+    line-height: 0.96;
+  }
+  .display-md {
+    font-variation-settings: "wdth" 112;
+    font-weight: 680;
+    letter-spacing: -0.025em;
+    line-height: 1.06;
+  }
+  .narrow {
+    font-variation-settings: "wdth" 88;
+  }
+  .tabular {
+    font-variant-numeric: tabular-nums;
+  }
+
+  /* Price stamp: the one recurring accent */
+  .stamp {
+    display: inline-flex;
+    align-items: baseline;
+    gap: 0.3em;
+    background: var(--color-sun);
+    color: var(--color-ink);
+    border-radius: 8px;
+    padding: 0.18em 0.55em 0.22em;
+    font-variant-numeric: tabular-nums;
+    line-height: 1.1;
+  }
+
+  .glass {
+    background: rgb(255 255 255 / 0.14);
+    border: 1px solid rgb(255 255 255 / 0.22);
+    -webkit-backdrop-filter: blur(14px) saturate(140%);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+
+  .field {
+    display: block;
+    width: 100%;
+    border: 1px solid var(--color-line);
+    border-radius: 12px;
+    background: #fff;
+    padding: 0.75rem 0.9rem;
+    color: var(--color-ink);
+    transition:
+      border-color 0.15s,
+      box-shadow 0.15s;
+  }
+  .field:hover {
+    border-color: #c5cfdf;
+  }
+  .field:focus {
+    outline: none;
+    border-color: var(--color-lapis);
+    box-shadow: 0 0 0 4px var(--color-lapis-tint);
+  }
+  .label {
+    display: block;
+    font-size: 0.875rem;
+    font-weight: 600;
+    margin-bottom: 0.4rem;
+  }
+
+  .btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    border-radius: 999px;
+    padding: 0.78rem 1.3rem;
+    font-weight: 650;
+    line-height: 1.2;
+    transition:
+      background-color 0.15s,
+      color 0.15s,
+      border-color 0.15s,
+      transform 0.15s;
+    cursor: pointer;
+  }
+  .btn:active:not(:disabled) {
+    transform: scale(0.98);
+  }
+  .btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .btn-primary {
+    background: var(--color-lapis);
+    color: #fff;
+  }
+  .btn-primary:hover:not(:disabled) {
+    background: var(--color-lapis-deep);
+  }
+  .btn-dark {
+    background: var(--color-ink);
+    color: #fff;
+  }
+  .btn-dark:hover:not(:disabled) {
+    background: #1c2c4d;
+  }
+  .btn-ghost {
+    border: 1px solid var(--color-line);
+    background: #fff;
+    color: var(--color-ink);
+  }
+  .btn-ghost:hover:not(:disabled) {
+    border-color: var(--color-ink);
+  }
+  .btn-sun {
+    background: var(--color-sun);
+    color: var(--color-ink);
+  }
+  .btn-sun:hover:not(:disabled) {
+    background: #f5a90f;
+  }
+
+  .link-arrow {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-weight: 650;
+    color: var(--color-ink);
+  }
+  .link-arrow:hover {
+    color: var(--color-lapis);
+  }
+
+  .prose-plain p + p {
+    margin-top: 0.9em;
+  }
+
+  .scroll-row {
+    scrollbar-width: none;
+  }
+  .scroll-row::-webkit-scrollbar {
+    display: none;
+  }
+
+  /* Native date and select controls styled to sit inside the search bar */
+  .bare-input {
+    appearance: none;
+    background: transparent;
+    border: 0;
+    outline: none;
+    width: 100%;
+    min-width: 0;
+    color: var(--color-ink);
+    font-weight: 600;
+    cursor: pointer;
+  }
+  .bare-input::-webkit-calendar-picker-indicator {
+    opacity: 0.5;
+    cursor: pointer;
+  }
+}
+
+/* One orchestrated entrance on the homepage: headline, then search */
+@keyframes rise {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+.rise {
+  animation: rise 0.7s var(--ease-out-soft) both;
+}
+.rise-2 {
+  animation: rise 0.7s var(--ease-out-soft) 0.12s both;
+}
+.rise-3 {
+  animation: rise 0.7s var(--ease-out-soft) 0.24s both;
+}
