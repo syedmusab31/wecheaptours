@@ -11,7 +11,9 @@ import { getProductReviews } from "@/features/review/server/review.service";
 import { cancellationText, CHILD_RULES, paymentText } from "@/features/booking/domain/booking-policy";
 import { categoryFromPath, CATEGORY_META } from "@/features/catalog/catalog.constants";
 import { getMoneyContext } from "@/features/settings/server/settings.service";
-import { siteUrl } from "@/lib/routes";
+import { TrackOnView } from "@/components/analytics/TrackOnView";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbList, graph, productGraph } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ category: string; slug: string }>;
@@ -25,7 +27,8 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: p.title,
     description: p.summary,
-    openGraph: { title: p.title, description: p.summary, images: p.images[0] ? [p.images[0]] : [] },
+    // The share image is generated next to this page (opengraph-image.tsx)
+    openGraph: { title: p.title, description: p.summary, type: "website", url: productHref(p) },
     alternates: { canonical: productHref(p) },
   };
 }
@@ -57,36 +60,36 @@ export default async function ProductPage({ params, searchParams }: Props) {
     ...(p.pickupIncluded && p.category !== "stay" ? [{ icon: MapPin, text: "Hotel pickup included" }] : []),
   ];
 
-  const jsonLd = {
-    "@context": "https://schema.org",
-    "@type": "Product",
-    name: p.title,
-    description: p.summary,
-    image: p.images,
-    url: siteUrl(productHref(p)),
-    offers: {
-      "@type": "Offer",
-      priceCurrency: p.currency,
-      price: (p.priceCents / 100).toFixed(2),
-      availability: "https://schema.org/InStock",
-    },
-    ...(p.reviewCount
-      ? {
-          aggregateRating: {
-            "@type": "AggregateRating",
-            ratingValue: Number(p.rating),
-            reviewCount: p.reviewCount,
-          },
-        }
-      : {}),
-  };
+  const crumbs = [
+    { name: "Home", path: "/" },
+    { name: meta.label, path: `/${meta.path}` },
+    ...(p.destinationSlug && p.destinationName
+      ? [{ name: p.destinationName, path: `/destinations/${p.destinationSlug}` }]
+      : []),
+    { name: p.title, path: productHref(p) },
+  ];
+  const structuredData = graph(
+    productGraph({
+      title: p.title,
+      summary: p.summary,
+      images: p.images,
+      url: productHref(p),
+      priceCents: p.priceCents,
+      currency: p.currency,
+      rating: Number(p.rating),
+      reviewCount: p.reviewCount,
+      destinationName: p.destinationName,
+      country: p.country,
+      itinerary: p.itinerary,
+      isTrip: p.category === "tour" || p.category === "cruise" || p.category === "package",
+    }),
+    breadcrumbList(crumbs),
+  );
 
   return (
     <div className="mx-auto max-w-[1260px] px-4 pt-6 pb-24 sm:px-8 lg:pb-10">
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd).replace(/</g, "\\u003c") }}
-      />
+      <JsonLd data={structuredData} />
+      <TrackOnView event="product_view" props={{ productId: p.id, category: p.category }} />
       <nav aria-label="Breadcrumb" className="text-ink-mute text-sm">
         <ol className="flex flex-wrap items-center gap-1.5">
           <li>

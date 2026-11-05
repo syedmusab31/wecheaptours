@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Turnstile } from "@/components/ui/Turnstile";
 import { formatCents, type Currency } from "@/lib/money";
+import { track } from "@/lib/analytics";
 
 type Selection = {
   productId: number;
@@ -91,6 +92,11 @@ export function CheckoutForm({
         setSending(false);
         return;
       }
+      track("booking_requested", {
+        productId: booking.productId,
+        optionId: booking.optionId,
+        promo: Boolean(promo),
+      });
       router.push(data.url);
     } catch {
       setError("No connection. Check your internet and try again.");

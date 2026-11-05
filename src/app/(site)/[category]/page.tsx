@@ -4,6 +4,8 @@ import { SearchResults } from "@/features/catalog/components/SearchResults";
 import { categoryFromPath, CATEGORY_META } from "@/features/catalog/catalog.constants";
 import { parseSearchParams } from "@/features/catalog/search-params";
 import { getRegionLabel } from "@/features/destination/server/destination.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbList, graph } from "@/lib/seo";
 
 type Props = {
   params: Promise<{ category: string }>;
@@ -18,10 +20,17 @@ const INTRO: Record<string, string> = {
   package: "Multi-day trips with hotels, guides, transfers and domestic flights arranged for you.",
 };
 
-export async function generateMetadata({ params }: Props): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: Props): Promise<Metadata> {
   const c = categoryFromPath((await params).category);
   if (!c) return {};
-  return { title: `${CATEGORY_META[c].plural} in ${await getRegionLabel("&")}`, description: INTRO[c] };
+  const filtered = Object.values(await searchParams).some((v) => v !== undefined && v !== "");
+  return {
+    title: `${CATEGORY_META[c].plural} in ${await getRegionLabel("&")}`,
+    description: INTRO[c],
+    // Every filter combination is the same listing to a search engine: one canonical URL
+    alternates: { canonical: `/${CATEGORY_META[c].path}` },
+    ...(filtered ? { robots: { index: false, follow: true } } : {}),
+  };
 }
 
 export default async function CategoryPage({ params, searchParams }: Props) {
@@ -30,13 +39,23 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const raw = await searchParams;
   const parsed = parseSearchParams({ ...raw, type: c });
   return (
-    <SearchResults
-      params={parsed}
-      raw={raw}
-      basePath={`/${CATEGORY_META[c].path}`}
-      heading={`${CATEGORY_META[c].plural} in ${await getRegionLabel("&")}`}
-      intro={INTRO[c]}
-      lockCategory={c}
-    />
+    <>
+      <JsonLd
+        data={graph(
+          breadcrumbList([
+            { name: "Home", path: "/" },
+            { name: CATEGORY_META[c].label, path: `/${CATEGORY_META[c].path}` },
+          ]),
+        )}
+      />
+      <SearchResults
+        params={parsed}
+        raw={raw}
+        basePath={`/${CATEGORY_META[c].path}`}
+        heading={`${CATEGORY_META[c].plural} in ${await getRegionLabel("&")}`}
+        intro={INTRO[c]}
+        lockCategory={c}
+      />
+    </>
   );
 }

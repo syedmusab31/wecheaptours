@@ -3,6 +3,7 @@ import { headers } from "next/headers";
 import "./globals.css";
 import { SITE } from "@/config/site";
 import { getRegionLabel } from "@/features/destination/server/destination.service";
+import { Analytics } from "@/components/analytics/Analytics";
 
 const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -24,7 +25,10 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   await headers();
   return (
     <html lang="en">
-      <body>{children}</body>
+      <body>
+        {children}
+        <Analytics />
+      </body>
     </html>
   );
 }

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { CircleCheck } from "lucide-react";
 import { Turnstile } from "@/components/ui/Turnstile";
 import { toISODate } from "@/lib/dates";
+import { track } from "@/lib/analytics";
 
 const TOPICS = [
   { value: "general", label: "A general question" },
@@ -51,8 +52,10 @@ export function EnquiryForm({
       }),
     }).catch(() => null);
     const data = res ? await res.json().catch(() => ({})) : {};
-    if (res?.ok) setState("done");
-    else {
+    if (res?.ok) {
+      track("enquiry_sent", { topic: currentTopic });
+      setState("done");
+    } else {
       setError(data.error ?? "We couldn't send your message. Check your connection and try again.");
       setState("idle");
     }

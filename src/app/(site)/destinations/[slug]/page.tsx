@@ -7,13 +7,24 @@ import { getDestinationBySlug } from "@/features/destination/server/destination.
 import { searchProducts } from "@/features/catalog/server/catalog.service";
 import { CATEGORIES, CATEGORY_META } from "@/features/catalog/catalog.constants";
 import { getMoneyContext } from "@/features/settings/server/settings.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { breadcrumbList, graph } from "@/lib/seo";
 
 type Props = { params: Promise<{ slug: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const d = await getDestinationBySlug((await params).slug);
   if (!d) return {};
-  return { title: `${d.name} tours, transfers & stays`, description: d.description };
+  return {
+    title: `${d.name} tours, transfers & stays`,
+    description: d.description,
+    alternates: { canonical: `/destinations/${d.slug}` },
+    openGraph: {
+      title: `${d.name} tours, transfers & stays`,
+      description: d.tagline,
+      images: d.image ? [d.image] : [],
+    },
+  };
 }
 
 export default async function DestinationPage({ params }: Props) {
@@ -27,6 +38,15 @@ export default async function DestinationPage({ params }: Props) {
 
   return (
     <>
+      <JsonLd
+        data={graph(
+          breadcrumbList([
+            { name: "Home", path: "/" },
+            { name: "Destinations", path: "/destinations" },
+            { name: d.name, path: `/destinations/${d.slug}` },
+          ]),
+        )}
+      />
       <section className="px-2 pt-2 sm:px-3 sm:pt-3">
         <div className="bg-ink relative isolate overflow-hidden rounded-[28px] text-white sm:rounded-[36px]">
           <Image src={d.image} alt={d.name} fill priority sizes="100vw" className="-z-10 object-cover" />

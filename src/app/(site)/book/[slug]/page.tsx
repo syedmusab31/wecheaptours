@@ -12,6 +12,7 @@ import { formatCents, formatMoney } from "@/lib/money";
 import { productHref } from "@/lib/routes";
 import { formatDate } from "@/lib/utils";
 import { AppError } from "@/server/errors";
+import { TrackOnView } from "@/components/analytics/TrackOnView";
 
 export const metadata: Metadata = { title: "Your booking request", robots: { index: false } };
 
@@ -68,6 +69,10 @@ export default async function BookPage({ params, searchParams }: Props) {
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">
+      <TrackOnView
+        event="checkout_started"
+        props={{ productId: p.id, category: p.category, totalCents: q.totalCents }}
+      />
       <Link href={productHref(p)} className="text-lapis text-sm font-semibold hover:underline">
         Back to trip
       </Link>

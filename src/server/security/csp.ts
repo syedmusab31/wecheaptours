@@ -6,6 +6,7 @@ import { env } from "@/config/env";
 export function buildCsp(nonce: string, opts: { dev: boolean }): string {
   const turnstile = "https://challenges.cloudflare.com";
   const sentry = sentryOrigin();
+  const posthog = posthogOrigin();
   const directives: Record<string, string[]> = {
     "default-src": ["'self'"],
     // 'strict-dynamic' lets nonce'd Next.js chunks load further chunks; dev needs eval for fast refresh.
@@ -25,6 +26,7 @@ export function buildCsp(nonce: string, opts: { dev: boolean }): string {
       "https://api.cloudinary.com",
       turnstile,
       ...(sentry ? [sentry] : []),
+      ...(posthog ? [posthog] : []),
       ...(opts.dev ? ["ws:"] : []),
     ],
     "frame-src": [turnstile],
@@ -42,6 +44,16 @@ export function buildCsp(nonce: string, opts: { dev: boolean }): string {
 function sentryOrigin(): string {
   try {
     return env.NEXT_PUBLIC_SENTRY_DSN ? new URL(env.NEXT_PUBLIC_SENTRY_DSN).origin : "";
+  } catch {
+    return "";
+  }
+}
+
+/** Where funnel events are sent (src/lib/analytics.ts), only when a PostHog key is set */
+function posthogOrigin(): string {
+  if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) return "";
+  try {
+    return new URL(process.env.NEXT_PUBLIC_POSTHOG_HOST || "https://eu.i.posthog.com").origin;
   } catch {
     return "";
   }

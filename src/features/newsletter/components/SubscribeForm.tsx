@@ -3,6 +3,7 @@
 import { useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { Turnstile } from "@/components/ui/Turnstile";
+import { track } from "@/lib/analytics";
 
 export function SubscribeForm() {
   const [email, setEmail] = useState("");
@@ -20,8 +21,10 @@ export function SubscribeForm() {
       body: JSON.stringify({ email, turnstileToken }),
     }).catch(() => null);
     const data = res ? await res.json().catch(() => ({})) : {};
-    if (res?.ok) setState({ status: "done" });
-    else
+    if (res?.ok) {
+      track("newsletter_subscribed");
+      setState({ status: "done" });
+    } else
       setState({
         status: "error",
         msg: data.error ?? "Couldn't subscribe. Check the address and try again.",

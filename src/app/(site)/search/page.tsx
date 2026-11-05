@@ -4,7 +4,16 @@ import { getDestinationBySlug } from "@/features/destination/server/destination.
 import { CATEGORY_META } from "@/features/catalog/catalog.constants";
 import { parseSearchParams } from "@/features/catalog/search-params";
 
-export const metadata: Metadata = { title: "Search", robots: { index: false } };
+export async function generateMetadata({ searchParams }: Props): Promise<Metadata> {
+  const { category } = parseSearchParams(await searchParams);
+  return {
+    title: "Search",
+    robots: { index: false, follow: true },
+    alternates: {
+      canonical: category && category !== "all" ? `/${CATEGORY_META[category].path}` : "/search",
+    },
+  };
+}
 
 type Props = { searchParams: Promise<Record<string, string | string[] | undefined>> };
 

@@ -15,7 +15,9 @@ import {
   getRegionLabel,
 } from "@/features/destination/server/destination.service";
 import { getLatestReviews, getReviewStats } from "@/features/review/server/review.service";
-import { getMoneyContext } from "@/features/settings/server/settings.service";
+import { getMoneyContext, getSettings } from "@/features/settings/server/settings.service";
+import { JsonLd } from "@/components/seo/JsonLd";
+import { graph, organization, website } from "@/lib/seo";
 
 function SectionHeading({
   title,
@@ -78,6 +80,7 @@ export default async function HomePage() {
     getReviewStats(),
     getRegionLabel("&"),
   ]);
+  const { contact } = await getSettings();
   const fmt = (usd: number) => formatMoney(usd, money.currency, money.rates);
 
   const points: MapPoint[] = destinations.map((d) => {
@@ -135,6 +138,7 @@ export default async function HomePage() {
 
   return (
     <>
+      <JsonLd data={graph(organization(contact), website())} />
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="px-2 pt-2 sm:px-3 sm:pt-3">
         <div className="bg-ink relative isolate flex min-h-[640px] flex-col justify-end overflow-hidden rounded-[28px] text-white sm:rounded-[36px] lg:min-h-[720px]">

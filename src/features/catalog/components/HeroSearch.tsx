@@ -19,6 +19,7 @@ import { addDays, toISODate } from "@/lib/dates";
 import { cn } from "@/lib/utils";
 import { distinct } from "@/lib/collections";
 import { joinList } from "@/lib/text";
+import { track } from "@/lib/analytics";
 
 type Dest = { slug: string; name: string; country: string };
 
@@ -100,6 +101,7 @@ export function HeroSearch({
     if (date) q.set("date", date);
     if (type === "stay" && end) q.set("end", end);
     if (guests) q.set("guests", String(guests));
+    track("search", { category: type, destination: where || null, guests: guests || null });
     router.push(`/search?${q.toString()}`);
   }
 
