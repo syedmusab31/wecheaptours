@@ -1,28 +1,28 @@
-import bcrypt from "bcryptjs";
-import { eq } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { z } from "zod";
-import { db } from "@/db";
-import { adminUsers } from "@/db/schema";
-import { SESSION_COOKIE, sessionCookieOptions, signSession } from "@/lib/session";
+import { loginSchema } from "@/features/identity/identity.schema";
+import { login } from "@/features/identity/server/auth.service";
+import { SESSION_COOKIE, sessionCookieOptions } from "@/features/identity/server/session";
+import { readJson, toErrorResponse } from "@/server/http";
+import { isSameOrigin } from "@/server/security/origin";
+import { clientIp, enforceRateLimit } from "@/server/security/rate-limit";
 
 export const runtime = "nodejs";
 
-const schema = z.object({ email: z.string().trim().toLowerCase().email(), password: z.string().min(1) });
-
 export async function POST(req: Request) {
-  const parsed = schema.safeParse(await req.json().catch(() => ({})));
-  if (!parsed.success) return NextResponse.json({ error: "Enter your email and password." }, { status: 422 });
+  if (!isSameOrigin(req)) return NextResponse.json({ error: "Bad origin" }, { status: 403 });
+  try {
+    const body = await readJson(req);
+    const parsed = loginSchema.safeParse(body);
+    const email = parsed.success ? parsed.data.email : "";
+    await enforceRateLimit("login", clientIp(req.headers), email);
+    if (!parsed.success)
+      return NextResponse.json({ error: "Enter your email and password." }, { status: 422 });
 
-  const [user] = await db.select().from(adminUsers).where(eq(adminUsers.email, parsed.data.email));
-  const ok = user ? await bcrypt.compare(parsed.data.password, user.passwordHash) : false;
-  if (!user || !ok) {
-    await new Promise((r) => setTimeout(r, 400)); // slow down guessing
-    return NextResponse.json({ error: "Email or password is incorrect." }, { status: 401 });
+    const token = await login(parsed.data.email, parsed.data.password);
+    const res = NextResponse.json({ ok: true });
+    res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
+    return res;
+  } catch (err) {
+    return toErrorResponse(err);
   }
-
-  const token = await signSession({ sub: String(user.id), email: user.email, name: user.name });
-  const res = NextResponse.json({ ok: true });
-  res.cookies.set(SESSION_COOKIE, token, sessionCookieOptions);
-  return res;
 }

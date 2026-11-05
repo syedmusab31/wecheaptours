@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
-import { Results } from "@/components/site/Results";
-import { categoryFromPath, CATEGORY_META } from "@/lib/rules";
-import { parseSearchParams } from "@/lib/search-params";
+import { SearchResults } from "@/features/catalog/components/SearchResults";
+import { categoryFromPath, CATEGORY_META } from "@/features/catalog/catalog.constants";
+import { parseSearchParams } from "@/features/catalog/search-params";
 
 type Props = {
   params: Promise<{ category: string }>;
@@ -29,7 +29,7 @@ export default async function CategoryPage({ params, searchParams }: Props) {
   const raw = await searchParams;
   const parsed = parseSearchParams({ ...raw, type: c });
   return (
-    <Results
+    <SearchResults
       params={parsed}
       raw={raw}
       basePath={`/${CATEGORY_META[c].path}`}

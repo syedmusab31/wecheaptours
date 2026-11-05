@@ -1,30 +1,23 @@
-import { desc } from "drizzle-orm";
 import { NextResponse } from "next/server";
-import { db } from "@/db";
-import { bookings, subscribers } from "@/db/schema";
-import { getAdmin } from "@/lib/auth";
+import { listForExport } from "@/features/booking/server/booking.service";
+import { getAdmin } from "@/features/identity/server/auth";
+import { can } from "@/features/identity/server/permissions";
+import { listSubscribers } from "@/features/newsletter/server/newsletter.service";
+import { toCsv } from "@/lib/csv";
 
 export const runtime = "nodejs";
 
-function csv(rows: Record<string, unknown>[]) {
-  if (!rows.length) return "";
-  const head = Object.keys(rows[0]);
-  const cell = (v: unknown) => {
-    const s = v instanceof Date ? v.toISOString() : String(v ?? "");
-    return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
-  };
-  return [head.join(","), ...rows.map((r) => head.map((h) => cell(r[h])).join(","))].join("\n");
-}
-
 export async function GET(_: Request, { params }: { params: Promise<{ kind: string }> }) {
-  if (!(await getAdmin())) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  const admin = await getAdmin();
+  if (!admin) return NextResponse.json({ error: "Not signed in" }, { status: 401 });
+  if (!can(admin.role, "data:export")) return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   const { kind } = await params;
-  let body = "";
+  let body: string;
   if (kind === "bookings") {
-    const rows = await db.select().from(bookings).orderBy(desc(bookings.createdAt));
-    body = csv(rows.map(({ accessToken: _t, ...r }) => r));
+    const rows = await listForExport();
+    body = toCsv(rows);
   } else if (kind === "subscribers") {
-    body = csv(await db.select().from(subscribers).orderBy(desc(subscribers.createdAt)));
+    body = toCsv(await listSubscribers());
   } else {
     return NextResponse.json({ error: "Unknown export" }, { status: 404 });
   }

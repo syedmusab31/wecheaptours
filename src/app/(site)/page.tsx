@@ -1,29 +1,34 @@
 import Image from "next/image";
 import Link from "next/link";
 import { ArrowRight, BadgeCheck, CalendarCheck, Headset, Star, Wallet } from "lucide-react";
-import { Carousel } from "@/components/site/Carousel";
-import { ExploreMap, type MapPoint } from "@/components/site/ExploreMap";
-import { HeroSearch } from "@/components/site/HeroSearch";
-import { ProductCard, productHref } from "@/components/site/ProductCard";
-import { IMG } from "@/db/data/destinations";
-import { formatMoney } from "@/lib/currency";
-import {
-  getAvailability,
-  getByCategory,
-  getDestinationFromPrices,
-  getDestinations,
-  getFeatured,
-  getLatestReviews,
-  getReviewStats,
-} from "@/lib/queries";
-import { getMoneyContext } from "@/lib/settings";
+import { Carousel } from "@/components/ui/Carousel";
+import { ExploreMap, type MapPoint } from "@/features/destination/components/ExploreMap";
+import { HeroSearch } from "@/features/catalog/components/HeroSearch";
+import { ProductCard } from "@/features/catalog/components/ProductCard";
+import { productHref } from "@/lib/routes";
+import { IMG } from "@/features/destination/destination-images";
+import { formatMoney } from "@/lib/money";
+import { getAvailability, getByCategory, getFeatured } from "@/features/catalog/server/catalog.service";
+import { getDestinationFromPrices, getDestinations } from "@/features/destination/server/destination.service";
+import { getLatestReviews, getReviewStats } from "@/features/review/server/review.service";
+import { getMoneyContext } from "@/features/settings/server/settings.service";
 
-function SectionHeading({ title, text, href, cta }: { title: string; text?: string; href?: string; cta?: string }) {
+function SectionHeading({
+  title,
+  text,
+  href,
+  cta,
+}: {
+  title: string;
+  text?: string;
+  href?: string;
+  cta?: string;
+}) {
   return (
     <div className="flex flex-wrap items-end justify-between gap-x-8 gap-y-3">
       <div className="max-w-2xl">
         <h2 className="display-md text-[2rem] sm:text-[2.6rem]">{title}</h2>
-        {text && <p className="mt-3 text-lg text-ink-soft">{text}</p>}
+        {text && <p className="text-ink-soft mt-3 text-lg">{text}</p>}
       </div>
       {href && cta && (
         <Link href={href} className="link-arrow shrink-0">
@@ -42,7 +47,19 @@ function cruiseStops(slug: string): string[] {
 }
 
 export default async function HomePage() {
-  const [money, destinations, fromPrices, featured, cruises, transfers, stays, packages, reviews, available, stats] = await Promise.all([
+  const [
+    money,
+    destinations,
+    fromPrices,
+    featured,
+    cruises,
+    transfers,
+    stays,
+    packages,
+    reviews,
+    available,
+    stats,
+  ] = await Promise.all([
     getMoneyContext(),
     getDestinations(),
     getDestinationFromPrices(),
@@ -66,7 +83,7 @@ export default async function HomePage() {
       tagline: d.tagline,
       image: d.image,
       count: fp?.count ?? 0,
-      fromLabel: fp ? fmt(fp.min) : null,
+      fromLabel: fp ? fmt(fp.minCents / 100) : null,
     };
   });
 
@@ -78,7 +95,7 @@ export default async function HomePage() {
       text: "A driver waiting in arrivals. One price per car, not per person.",
       href: "/transfers",
       image: IMG.car[3],
-      from: transfers[0] ? fmt(Number(transfers[0].price)) : null,
+      from: transfers[0] ? fmt(transfers[0].priceCents / 100) : null,
       cls: "lg:col-span-2 lg:row-span-2 min-h-[320px] lg:min-h-[520px]",
       big: true,
     },
@@ -87,7 +104,7 @@ export default async function HomePage() {
       text: "Pyramid views, Nile gardens, desert domes.",
       href: "/stays",
       image: IMG.room[0],
-      from: stays[0] ? fmt(Number(stays[0].price)) : null,
+      from: stays[0] ? fmt(stays[0].priceCents / 100) : null,
       cls: "lg:col-span-2 min-h-[250px]",
     },
     {
@@ -95,7 +112,7 @@ export default async function HomePage() {
       text: "Hotels, guides and flights, arranged.",
       href: "/packages",
       image: IMG.petra[0],
-      from: packages[0] ? fmt(Number(packages[0].price)) : null,
+      from: packages[0] ? fmt(packages[0].priceCents / 100) : null,
       cls: "min-h-[250px]",
     },
     {
@@ -112,7 +129,7 @@ export default async function HomePage() {
     <>
       {/* ── Hero ─────────────────────────────────────────────── */}
       <section className="px-2 pt-2 sm:px-3 sm:pt-3">
-        <div className="relative isolate flex min-h-[640px] flex-col justify-end overflow-hidden rounded-[28px] bg-ink text-white sm:rounded-[36px] lg:min-h-[720px]">
+        <div className="bg-ink relative isolate flex min-h-[640px] flex-col justify-end overflow-hidden rounded-[28px] text-white sm:rounded-[36px] lg:min-h-[720px]">
           <Image
             src={IMG.giza[4]}
             alt="Camels crossing the desert in front of the three pyramids of Giza"
@@ -123,7 +140,7 @@ export default async function HomePage() {
           />
           <div className="absolute inset-0 -z-10 bg-[linear-gradient(180deg,rgba(15,27,51,0.35)_0%,rgba(15,27,51,0)_30%,rgba(15,27,51,0.15)_55%,rgba(15,27,51,0.82)_100%)]" />
 
-          <span className="glass absolute right-5 top-5 hidden rounded-full px-3.5 py-1.5 text-xs font-medium text-white sm:inline-flex">
+          <span className="glass absolute top-5 right-5 hidden rounded-full px-3.5 py-1.5 text-xs font-medium text-white sm:inline-flex">
             Giza Plateau, Egypt
           </span>
 
@@ -134,7 +151,8 @@ export default async function HomePage() {
               for less.
             </h1>
             <p className="rise-2 mt-5 max-w-xl text-lg leading-relaxed text-white/85 sm:text-xl">
-              Day trips, Nile cruises, transfers and stays from a local team. Send a request in two minutes; pay nothing until we confirm.
+              Day trips, Nile cruises, transfers and stays from a local team. Send a request in two minutes;
+              pay nothing until we confirm.
             </p>
             <HeroSearch
               className="rise-3 mt-8 sm:mt-10"
@@ -155,12 +173,12 @@ export default async function HomePage() {
             { icon: Headset, title: "Real people on WhatsApp", text: "Every day, 8:00 to 23:00" },
           ].map((p) => (
             <li key={p.title} className="flex items-start gap-3.5">
-              <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-mist text-lapis">
+              <span className="bg-mist text-lapis flex h-10 w-10 shrink-0 items-center justify-center rounded-full">
                 <p.icon size={19} aria-hidden />
               </span>
               <span>
                 <span className="block text-[0.95rem] font-semibold">{p.title}</span>
-                <span className="block text-sm text-ink-mute">{p.text}</span>
+                <span className="text-ink-mute block text-sm">{p.text}</span>
               </span>
             </li>
           ))}
@@ -187,9 +205,12 @@ export default async function HomePage() {
           heading={
             <>
               <h2 className="display-md text-[2rem] sm:text-[2.6rem]">Most booked</h2>
-              <p className="mt-3 text-lg text-ink-soft">
+              <p className="text-ink-soft mt-3 text-lg">
                 The trips guests pick first.{" "}
-                <Link href="/search?sort=rating" className="font-semibold text-ink underline decoration-line decoration-2 underline-offset-4 hover:decoration-ink">
+                <Link
+                  href="/search?sort=rating"
+                  className="text-ink decoration-line hover:decoration-ink font-semibold underline decoration-2 underline-offset-4"
+                >
                   See all
                 </Link>
               </p>
@@ -205,16 +226,23 @@ export default async function HomePage() {
       </section>
 
       {/* ── Nile cruises ─────────────────────────────────────── */}
-      <section className="mt-24 bg-mist py-20 sm:mt-28 sm:py-24">
+      <section className="bg-mist mt-24 py-20 sm:mt-28 sm:py-24">
         <div className="mx-auto grid max-w-[1260px] grid-cols-1 gap-10 px-4 sm:px-8 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14">
           <div className="relative isolate flex min-h-[420px] flex-col justify-end overflow-hidden rounded-[var(--radius-panel)] p-7 text-white sm:p-9">
-            <Image src={IMG.nile[1]} alt="A cruise boat on the Nile" fill sizes="(max-width: 1024px) 100vw, 45vw" className="-z-10 object-cover" />
-            <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/85 via-ink/20 to-transparent" />
+            <Image
+              src={IMG.nile[1]}
+              alt="A cruise boat on the Nile"
+              fill
+              sizes="(max-width: 1024px) 100vw, 45vw"
+              className="-z-10 object-cover"
+            />
+            <div className="from-ink/85 via-ink/20 absolute inset-0 -z-10 bg-gradient-to-t to-transparent" />
             <h2 className="display-md text-[2rem] sm:text-[2.6rem]">Sail the Nile</h2>
             <p className="mt-3 max-w-md text-white/85">
-              Five-star boats between Luxor and Aswan. Every meal on board and an Egyptologist at every temple.
+              Five-star boats between Luxor and Aswan. Every meal on board and an Egyptologist at every
+              temple.
             </p>
-            <Link href="/cruises" className="btn mt-6 self-start bg-white text-ink hover:bg-white/90">
+            <Link href="/cruises" className="btn text-ink mt-6 self-start bg-white hover:bg-white/90">
               Compare cruises <ArrowRight size={17} aria-hidden />
             </Link>
           </div>
@@ -224,31 +252,44 @@ export default async function HomePage() {
               const stops = cruiseStops(c.slug);
               return (
                 <li key={c.id}>
-                  <Link href={productHref(c)} className="group block rounded-[var(--radius-card)] bg-white p-6 transition-shadow hover:shadow-[var(--shadow-lift)] sm:p-7">
+                  <Link
+                    href={productHref(c)}
+                    className="group block rounded-[var(--radius-card)] bg-white p-6 transition-shadow hover:shadow-[var(--shadow-lift)] sm:p-7"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <div>
-                        <p className="font-semibold group-hover:text-lapis">{c.durationLabel}</p>
-                        <p className="mt-0.5 text-sm text-ink-mute">
+                        <p className="group-hover:text-lapis font-semibold">{c.durationLabel}</p>
+                        <p className="text-ink-mute mt-0.5 text-sm">
                           {stops[0]} to {stops.at(-1)}
                           {stops[0] === stops.at(-1) ? " (roundtrip)" : ""}
                         </p>
                       </div>
                       <p className="text-right">
-                        <span className="stamp text-lg font-extrabold">{fmt(Number(c.price))}</span>
-                        <span className="mt-1 block text-xs text-ink-mute">per person</span>
+                        <span className="stamp text-lg font-extrabold">{fmt(c.priceCents / 100)}</span>
+                        <span className="text-ink-mute mt-1 block text-xs">per person</span>
                       </p>
                     </div>
                     {/* Route line */}
                     <ol
-                      className="relative mt-6 flex justify-between before:absolute before:left-1.5 before:right-1.5 before:top-[5px] before:h-[2px] before:bg-lapis/20 before:content-['']"
+                      className="before:bg-lapis/20 relative mt-6 flex justify-between before:absolute before:top-[5px] before:right-1.5 before:left-1.5 before:h-[2px] before:content-['']"
                       aria-label="Stops"
                     >
                       {stops.map((s, i) => {
                         const end = i === 0 || i === stops.length - 1;
                         return (
-                          <li key={i} className={`relative flex flex-col ${i === 0 ? "items-start" : i === stops.length - 1 ? "items-end" : "items-center"}`}>
-                            <span aria-hidden className={`h-3 w-3 rounded-full border-2 border-lapis ${end ? "bg-lapis" : "bg-white"}`} />
-                            <span className={`mt-2 text-xs ${end ? "font-semibold text-ink" : "text-ink-mute"}`}>{s}</span>
+                          <li
+                            key={i}
+                            className={`relative flex flex-col ${i === 0 ? "items-start" : i === stops.length - 1 ? "items-end" : "items-center"}`}
+                          >
+                            <span
+                              aria-hidden
+                              className={`border-lapis h-3 w-3 rounded-full border-2 ${end ? "bg-lapis" : "bg-white"}`}
+                            />
+                            <span
+                              className={`mt-2 text-xs ${end ? "text-ink font-semibold" : "text-ink-mute"}`}
+                            >
+                              {s}
+                            </span>
                           </li>
                         );
                       })}
@@ -263,7 +304,10 @@ export default async function HomePage() {
 
       {/* ── Bento: more ways to travel ───────────────────────── */}
       <section className="mx-auto mt-24 max-w-[1260px] px-4 sm:mt-28 sm:px-8">
-        <SectionHeading title="Everything else, sorted" text="Get from the airport, find a place to stay, or hand us the whole trip." />
+        <SectionHeading
+          title="Everything else, sorted"
+          text="Get from the airport, find a place to stay, or hand us the whole trip."
+        />
         <div className="mt-9 grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4 lg:grid-rows-2">
           {bento.map((b) => (
             <Link
@@ -271,16 +315,26 @@ export default async function HomePage() {
               href={b.href}
               className={`group relative isolate flex flex-col justify-end overflow-hidden rounded-[var(--radius-panel)] p-6 text-white sm:p-7 ${b.cls}`}
             >
-              <Image src={b.image} alt="" fill sizes="(max-width: 1024px) 90vw, 50vw" className="-z-10 object-cover transition-transform duration-700 group-hover:scale-[1.03]" />
-              <div className="absolute inset-0 -z-10 bg-gradient-to-t from-ink/85 via-ink/25 to-transparent" />
+              <Image
+                src={b.image}
+                alt=""
+                fill
+                sizes="(max-width: 1024px) 90vw, 50vw"
+                className="-z-10 object-cover transition-transform duration-700 group-hover:scale-[1.03]"
+              />
+              <div className="from-ink/85 via-ink/25 absolute inset-0 -z-10 bg-gradient-to-t to-transparent" />
               {b.from && (
-                <span className="absolute left-5 top-5 rounded-full bg-white px-3 py-1 text-xs font-semibold text-ink">
+                <span className="text-ink absolute top-5 left-5 rounded-full bg-white px-3 py-1 text-xs font-semibold">
                   from <b className="tabular">{b.from}</b>
                 </span>
               )}
-              <span className={b.big ? "display-md text-[1.9rem] sm:text-[2.3rem]" : "text-xl font-semibold"}>{b.title}</span>
-              <span className={`mt-1.5 text-white/80 ${b.big ? "max-w-sm text-lg" : "text-sm"}`}>{b.text}</span>
-              <span className="mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur transition-colors group-hover:bg-white group-hover:text-ink">
+              <span className={b.big ? "display-md text-[1.9rem] sm:text-[2.3rem]" : "text-xl font-semibold"}>
+                {b.title}
+              </span>
+              <span className={`mt-1.5 text-white/80 ${b.big ? "max-w-sm text-lg" : "text-sm"}`}>
+                {b.text}
+              </span>
+              <span className="group-hover:text-ink mt-4 inline-flex h-10 w-10 items-center justify-center rounded-full bg-white/15 backdrop-blur transition-colors group-hover:bg-white">
                 <ArrowRight size={18} aria-hidden />
               </span>
             </Link>
@@ -290,8 +344,11 @@ export default async function HomePage() {
 
       {/* ── How booking works (a real sequence) ──────────────── */}
       <section className="mx-auto mt-24 max-w-[1260px] px-4 sm:mt-28 sm:px-8">
-        <SectionHeading title="How booking works" text="No card, no deposit to send a request. You only pay once we've confirmed." />
-        <ol className="relative mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8 lg:before:absolute lg:before:left-0 lg:before:right-0 lg:before:top-5 lg:before:h-px lg:before:bg-line lg:before:content-['']">
+        <SectionHeading
+          title="How booking works"
+          text="No card, no deposit to send a request. You only pay once we've confirmed."
+        />
+        <ol className="lg:before:bg-line relative mt-12 grid gap-10 sm:grid-cols-2 lg:grid-cols-4 lg:gap-8 lg:before:absolute lg:before:top-5 lg:before:right-0 lg:before:left-0 lg:before:h-px lg:before:content-['']">
           {[
             ["Pick a trip and a date", "Prices up front, including what isn't included."],
             ["Send a request", "Name, phone and pickup. Takes two minutes."],
@@ -299,11 +356,11 @@ export default async function HomePage() {
             ["Pay on confirmation or on the day", "Cash, card or bank transfer."],
           ].map(([title, text], i) => (
             <li key={title} className="relative">
-              <span className="relative flex h-10 w-10 items-center justify-center rounded-full bg-ink text-sm font-bold text-white ring-8 ring-white tabular">
+              <span className="bg-ink tabular relative flex h-10 w-10 items-center justify-center rounded-full text-sm font-bold text-white ring-8 ring-white">
                 {i + 1}
               </span>
               <p className="mt-5 text-lg font-semibold">{title}</p>
-              <p className="mt-1 text-ink-soft">{text}</p>
+              <p className="text-ink-soft mt-1">{text}</p>
             </li>
           ))}
         </ol>
@@ -316,32 +373,47 @@ export default async function HomePage() {
             <div>
               <h2 className="display-md text-[2rem] sm:text-[2.6rem]">Reviews</h2>
               <p className="mt-5 flex items-baseline gap-2">
-                <span className="display text-6xl tabular">{avg.toFixed(1)}</span>
+                <span className="display tabular text-6xl">{avg.toFixed(1)}</span>
                 <span className="text-ink-mute">out of 5</span>
               </p>
               <p className="mt-2 flex gap-0.5" aria-hidden>
                 {Array.from({ length: 5 }, (_, i) => (
-                  <Star key={i} size={18} className={i < Math.round(avg) ? "fill-sun text-sun" : "text-line"} />
+                  <Star
+                    key={i}
+                    size={18}
+                    className={i < Math.round(avg) ? "fill-sun text-sun" : "text-line"}
+                  />
                 ))}
               </p>
-              <p className="mt-3 text-sm text-ink-mute">From {stats.count} published guest reviews</p>
+              <p className="text-ink-mute mt-3 text-sm">From {stats.count} published guest reviews</p>
             </div>
             <div className="grid grid-cols-1 gap-4 md:grid-cols-3">
               {reviews.map(({ review: r, productTitle, productSlug, category }) => (
-                <figure key={r.id} className="flex flex-col rounded-[var(--radius-card)] border border-line p-6">
+                <figure
+                  key={r.id}
+                  className="border-line flex flex-col rounded-[var(--radius-card)] border p-6"
+                >
                   <p className="flex gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
                     {Array.from({ length: 5 }, (_, i) => (
-                      <Star key={i} size={15} className={i < r.rating ? "fill-sun text-sun" : "text-line"} aria-hidden />
+                      <Star
+                        key={i}
+                        size={15}
+                        className={i < r.rating ? "fill-sun text-sun" : "text-line"}
+                        aria-hidden
+                      />
                     ))}
                   </p>
                   <blockquote className="mt-4 flex-1">
                     <p className="font-semibold">{r.title}</p>
-                    <p className="mt-1.5 text-ink-soft">{r.body}</p>
+                    <p className="text-ink-soft mt-1.5">{r.body}</p>
                   </blockquote>
-                  <figcaption className="mt-6 border-t border-line pt-4 text-sm">
+                  <figcaption className="border-line mt-6 border-t pt-4 text-sm">
                     <span className="font-semibold">{r.authorName}</span>
                     <span className="text-ink-mute"> · {r.authorCountry}</span>
-                    <Link href={productHref({ category, slug: productSlug })} className="mt-0.5 block truncate text-ink-mute hover:text-lapis">
+                    <Link
+                      href={productHref({ category, slug: productSlug })}
+                      className="text-ink-mute hover:text-lapis mt-0.5 block truncate"
+                    >
                       {productTitle}
                     </Link>
                   </figcaption>
@@ -354,12 +426,19 @@ export default async function HomePage() {
 
       {/* ── Custom trip CTA ──────────────────────────────────── */}
       <section className="mx-auto mt-24 max-w-[1260px] px-4 sm:mt-28 sm:px-8">
-        <div className="relative isolate overflow-hidden rounded-[var(--radius-panel)] bg-lapis px-7 py-14 text-white sm:px-14 sm:py-20">
-          <Image src={IMG.wadirum[3]} alt="" fill sizes="100vw" className="-z-10 object-cover opacity-35 mix-blend-luminosity" />
+        <div className="bg-lapis relative isolate overflow-hidden rounded-[var(--radius-panel)] px-7 py-14 text-white sm:px-14 sm:py-20">
+          <Image
+            src={IMG.wadirum[3]}
+            alt=""
+            fill
+            sizes="100vw"
+            className="-z-10 object-cover opacity-35 mix-blend-luminosity"
+          />
           <div className="absolute inset-0 -z-10 bg-[linear-gradient(100deg,#2443c8_20%,rgba(36,67,200,0.55)_70%,rgba(36,67,200,0.2))]" />
           <h2 className="display max-w-2xl text-[2.4rem] sm:text-[3.6rem]">Want something we don't list?</h2>
           <p className="mt-4 max-w-xl text-lg text-white/85">
-            A custom route, a family reunion in Luxor, a dinner facing the pyramids. Tell us and we'll send a price, usually the same day.
+            A custom route, a family reunion in Luxor, a dinner facing the pyramids. Tell us and we'll send a
+            price, usually the same day.
           </p>
           <div className="mt-8 flex flex-wrap gap-3">
             <Link href="/enquire?topic=package" className="btn btn-sun">

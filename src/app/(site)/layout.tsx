@@ -1,25 +1,32 @@
-import { Footer } from "@/components/site/Footer";
-import { Header } from "@/components/site/Header";
-import { getDestinations } from "@/lib/queries";
-import { getCurrency, getSettings } from "@/lib/settings";
+import { SiteFooter } from "@/components/layout/SiteFooter";
+import { SiteHeader } from "@/components/layout/SiteHeader";
+import { getDestinations } from "@/features/destination/server/destination.service";
+import { getCurrency, getSettings } from "@/features/settings/server/settings.service";
 
 export const dynamic = "force-dynamic";
 
 export default async function SiteLayout({ children }: { children: React.ReactNode }) {
-  const [settings, currency, destinations] = await Promise.all([getSettings(), getCurrency(), getDestinations()]);
+  const [settings, currency, destinations] = await Promise.all([
+    getSettings(),
+    getCurrency(),
+    getDestinations(),
+  ]);
   return (
     <>
-      <a href="#main" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2">
+      <a
+        href="#main"
+        className="sr-only focus:not-sr-only focus:absolute focus:top-4 focus:left-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2"
+      >
         Skip to content
       </a>
       {settings.demoMode && (
-        <div className="bg-sun-tint px-4 py-2 text-center text-[0.8rem] text-ink">
+        <div className="bg-sun-tint text-ink px-4 py-2 text-center text-[0.8rem]">
           Demo site: photos, prices and reviews are samples and bookings are not real.
         </div>
       )}
-      <Header currency={currency} whatsapp={settings.contact.whatsapp} />
+      <SiteHeader currency={currency} whatsapp={settings.contact.whatsapp} />
       <main id="main">{children}</main>
-      <Footer destinations={destinations} contact={settings.contact} />
+      <SiteFooter destinations={destinations} contact={settings.contact} />
     </>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useRouter, useSearchParams } from "next/navigation";
 import { Suspense, useState } from "react";
-import { Logo } from "@/components/site/Logo";
+import { Logo } from "@/components/brand/Logo";
 
 function LoginForm() {
   const router = useRouter();
@@ -41,7 +41,7 @@ function LoginForm() {
         <input name="password" type="password" required autoComplete="current-password" className="field" />
       </label>
       {error && (
-        <p role="alert" className="rounded-lg bg-danger-tint px-3 py-2 text-sm text-danger">
+        <p role="alert" className="bg-danger-tint text-danger rounded-lg px-3 py-2 text-sm">
           {error}
         </p>
       )}
@@ -54,7 +54,7 @@ function LoginForm() {
 
 export default function LoginPage() {
   return (
-    <main className="flex min-h-dvh items-center justify-center bg-mist px-4">
+    <main className="bg-mist flex min-h-dvh items-center justify-center px-4">
       <div className="w-full max-w-sm rounded-2xl bg-white p-8 shadow-sm">
         <Logo />
         <h1 className="mt-6 text-xl font-bold">Staff sign in</h1>

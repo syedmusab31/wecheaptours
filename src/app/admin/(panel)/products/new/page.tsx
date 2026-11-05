@@ -1,14 +1,14 @@
+import { requirePermission } from "@/features/identity/server/auth";
 import Link from "next/link";
-import { asc } from "drizzle-orm";
-import { ProductForm } from "@/components/admin/ProductForm";
-import { db } from "@/db";
-import { destinations } from "@/db/schema";
+import { ProductForm } from "@/features/catalog/components/admin/ProductForm";
+import { listAllDestinations } from "@/features/destination/server/destination.service";
 
 export default async function NewProductPage() {
-  const dests = await db.select().from(destinations).orderBy(asc(destinations.sortOrder));
+  await requirePermission("catalog:edit");
+  const dests = await listAllDestinations();
   return (
     <div className="mx-auto max-w-4xl">
-      <Link href="/admin/products" className="text-sm font-semibold text-lapis hover:underline">
+      <Link href="/admin/products" className="text-lapis text-sm font-semibold hover:underline">
         All products
       </Link>
       <h1 className="mt-2 text-2xl font-bold">New product</h1>

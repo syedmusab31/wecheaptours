@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { isCurrency } from "@/lib/currency";
+import { isCurrency } from "@/lib/money";
 
 export async function POST(req: Request) {
   const { currency } = (await req.json().catch(() => ({}))) as { currency?: string };
