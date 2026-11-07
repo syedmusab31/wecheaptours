@@ -1,9 +1,12 @@
 import type { Metadata, Viewport } from "next";
 import { headers } from "next/headers";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 import "./globals.css";
 import { SITE } from "@/config/site";
 import { getRegionLabel } from "@/features/destination/server/destination.service";
 import { Analytics } from "@/components/analytics/Analytics";
+import { textDirection } from "@/i18n/config";
 
 const site = process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
 
@@ -23,10 +26,11 @@ export default async function RootLayout({ children }: { children: React.ReactNo
   // Reading the request's nonce makes every page render per request, which the nonce-based
   // Content-Security-Policy needs (Next.js adds the nonce to its scripts). Data stays cached: see Phase 5.
   await headers();
+  const locale = await getLocale();
   return (
-    <html lang="en">
+    <html lang={locale} dir={textDirection(locale)}>
       <body>
-        {children}
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
         <Analytics />
       </body>
     </html>

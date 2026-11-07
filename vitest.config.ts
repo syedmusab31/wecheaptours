@@ -2,6 +2,8 @@ import path from "node:path";
 import { defineConfig } from "vitest/config";
 
 export default defineConfig({
+  // Same JSX transform as Next.js (no `import React` needed), for email-template tests
+  esbuild: { jsx: "automatic" },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "src"),
@@ -11,7 +13,7 @@ export default defineConfig({
   },
   test: {
     environment: "node",
-    include: ["src/**/*.test.ts", "tests/**/*.test.ts"],
+    include: ["src/**/*.test.{ts,tsx}", "tests/**/*.test.ts"],
     setupFiles: ["tests/integration/env.ts"],
     globalSetup: ["tests/integration/setup-db.ts"],
     // Integration tests share one database, so files run one at a time.
@@ -20,6 +22,8 @@ export default defineConfig({
       provider: "v8",
       include: ["src/lib/**", "src/features/**/domain/**"],
       reporter: ["text", "html"],
+      // Business rules stay fully tested: CI (test:coverage) fails below this
+      thresholds: { "src/features/*/domain/**": { lines: 100, functions: 100, statements: 100 } },
     },
   },
 });

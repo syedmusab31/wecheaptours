@@ -1,6 +1,10 @@
-import type { Booking, PaymentKind } from "@/server/db/schema";
+import type { Booking, Payment, PaymentKind } from "@/server/db/schema";
 
 /** What a provider tells us happened, already verified */
+/**
+ * `amountCents` and `currency` are always in the booking's currency, so payments can be added up.
+ * A provider that charged another currency puts the charged amount in `raw`.
+ */
 export type PaymentEvent = {
   provider: string;
   providerRef: string;
@@ -24,8 +28,11 @@ export interface PaymentProvider {
     kind: "deposit" | "balance" | "full";
     successUrl: string;
     cancelUrl: string;
+    /** Display rates (1 USD = x), for providers that charge in another currency */
+    rates: Record<string, number>;
   }): Promise<{ url: string }>;
   /** Verifies the webhook signature and returns the payment event, or null for events we ignore */
   verifyWebhook(req: Request): Promise<PaymentEvent | null>;
-  refund(input: { providerRef: string; amountCents: number }): Promise<{ refundRef: string }>;
+  /** Refunds part or all of `payment`. `amountCents` is in the booking's currency, like every payment record. */
+  refund(input: { payment: Payment; amountCents: number }): Promise<{ refundRef: string }>;
 }

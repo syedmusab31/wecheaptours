@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import type { DestinationView } from "@/features/destination/server/destination.service";
 import { SITE } from "@/config/site";
 import { groupBy } from "@/lib/collections";
@@ -15,6 +16,8 @@ export function SiteFooter({
   contact: ContactSettings;
   region: string;
 }) {
+  const t = useTranslations("footer");
+  const nav = useTranslations("nav");
   const byCountry = groupBy(destinations, (d) => d.country);
   const col = "space-y-2.5 text-[0.92rem] text-white/65";
   const head = "mb-4 text-sm font-semibold text-white";
@@ -25,10 +28,8 @@ export function SiteFooter({
         <div className="mx-auto max-w-[1260px] px-6 sm:px-8">
           <div className="flex flex-col gap-6 border-b border-white/10 py-12 lg:flex-row lg:items-center lg:justify-between">
             <div>
-              <p className="display-md text-[1.7rem] sm:text-[2rem]">Cheaper still, by email</p>
-              <p className="mt-2 text-white/65">
-                One email a month: last-minute cruise cabins and seasonal deals.
-              </p>
+              <p className="display-md text-[1.7rem] sm:text-[2rem]">{t("newsletterTitle")}</p>
+              <p className="mt-2 text-white/65">{t("newsletterText")}</p>
             </div>
             <SubscribeForm />
           </div>
@@ -49,7 +50,7 @@ export function SiteFooter({
                   </li>
                 )}
                 {contact.address && <li>{contact.address}</li>}
-                {contact.licence && <li className="pt-2 text-xs text-white/45">{contact.licence}</li>}
+                {contact.licence && <li className="pt-2 text-xs text-white/60">{contact.licence}</li>}
               </ul>
             </div>
             {byCountry.map(([country, list], i) => (
@@ -69,47 +70,45 @@ export function SiteFooter({
             ))}
             {byCountry.length === 0 && <BookLinks head={head} col={col} a={a} />}
             <div>
-              <p className={head}>Help</p>
+              <p className={head}>{t("help")}</p>
               <ul className={col}>
                 <li>
                   <Link className={a} href="/my-booking">
-                    My booking
+                    {nav("myBooking")}
                   </Link>
                 </li>
                 <li>
                   <Link className={a} href="/booking-terms">
-                    Booking terms
+                    {t("bookingTerms")}
                   </Link>
                 </li>
                 <li>
                   <Link className={a} href="/booking-terms#cancellation">
-                    Cancellation policy
+                    {t("cancellationPolicy")}
                   </Link>
                 </li>
                 <li>
                   <Link className={a} href="/enquire">
-                    Contact us
+                    {t("contactUs")}
                   </Link>
                 </li>
                 <li>
                   <Link className={a} href="/concierge">
-                    Concierge & events
+                    {t("conciergeEvents")}
                   </Link>
                 </li>
                 <li>
                   <Link className={a} href="/privacy">
-                    Privacy
+                    {t("privacy")}
                   </Link>
                 </li>
               </ul>
             </div>
           </div>
 
-          <div className="flex flex-wrap justify-between gap-2 border-t border-white/10 py-6 text-xs text-white/45">
-            <span>
-              © {new Date().getFullYear()} WeCheapTours. Prices in US dollars unless shown otherwise.
-            </span>
-            <span>Cash, card or bank transfer after confirmation.</span>
+          <div className="flex flex-wrap justify-between gap-2 border-t border-white/10 py-6 text-xs text-white/60">
+            <span>{t("copyright", { year: new Date().getFullYear() })}</span>
+            <span>{t("payment")}</span>
           </div>
         </div>
       </div>
@@ -118,33 +117,34 @@ export function SiteFooter({
 }
 
 function BookLinks({ head, col, a }: { head: string; col: string; a: string }) {
+  const t = useTranslations();
   return (
     <>
-      <p className={`${head} mt-9`}>Book</p>
+      <p className={`${head} mt-9`}>{t("footer.book")}</p>
       <ul className={col}>
         <li>
           <Link className={a} href="/tours">
-            Day trips
+            {t("nav.tours")}
           </Link>
         </li>
         <li>
           <Link className={a} href="/cruises">
-            Nile cruises
+            {t("nav.cruises")}
           </Link>
         </li>
         <li>
           <Link className={a} href="/transfers">
-            Transfers
+            {t("nav.transfers")}
           </Link>
         </li>
         <li>
           <Link className={a} href="/stays">
-            Stays
+            {t("nav.stays")}
           </Link>
         </li>
         <li>
           <Link className={a} href="/packages">
-            Packages
+            {t("nav.packages")}
           </Link>
         </li>
       </ul>

@@ -1,6 +1,7 @@
 "use client";
 
 import Link from "next/link";
+import { useTranslations } from "next-intl";
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import { Turnstile } from "@/components/ui/Turnstile";
@@ -16,6 +17,7 @@ type Selection = {
   adults: number;
   children: number;
   infants: number;
+  tierGuests: Record<string, number>;
 };
 
 export function CheckoutForm({
@@ -31,6 +33,7 @@ export function CheckoutForm({
   needsPickup: boolean;
   pickupLabel: string;
 }) {
+  const t = useTranslations("checkout");
   const router = useRouter();
   const [error, setError] = useState<string | null>(null);
   const [sending, setSending] = useState(false);
@@ -55,7 +58,7 @@ export function CheckoutForm({
     const data = await res?.json().catch(() => ({}));
     if (!res?.ok) {
       setPromo(null);
-      setPromoError(data?.error ?? "We couldn't check that code.");
+      setPromoError(data?.error ?? t("promoCheckFailed"));
       return;
     }
     setPromo({ code: data.promoCode, discountCents: data.discountCents, totalCents: data.totalCents });
@@ -88,7 +91,7 @@ export function CheckoutForm({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) {
-        setError(data.error ?? "We couldn't send your request. Check the form and try again.");
+        setError(data.error ?? t("sendFailed"));
         setSending(false);
         return;
       }
@@ -99,7 +102,7 @@ export function CheckoutForm({
       });
       router.push(data.url);
     } catch {
-      setError("No connection. Check your internet and try again.");
+      setError(t("offline"));
       setSending(false);
     }
   }
@@ -108,16 +111,16 @@ export function CheckoutForm({
     <form onSubmit={submit} className="space-y-5" noValidate={false}>
       <div className="grid gap-4 sm:grid-cols-2">
         <label className="sm:col-span-2">
-          <span className="label">Full name</span>
+          <span className="label">{t("fullName")}</span>
           <input name="name" required autoComplete="name" className="field" />
         </label>
         <label>
-          <span className="label">Email</span>
+          <span className="label">{t("email")}</span>
           <input name="email" type="email" required autoComplete="email" className="field" />
-          <span className="text-ink-mute mt-1 block text-xs">We send your confirmation here.</span>
+          <span className="text-ink-mute mt-1 block text-xs">{t("emailHint")}</span>
         </label>
         <label>
-          <span className="label">Phone or WhatsApp</span>
+          <span className="label">{t("phone")}</span>
           <input
             name="phone"
             type="tel"
@@ -126,33 +129,24 @@ export function CheckoutForm({
             placeholder="+44 7700 900000"
             className="field"
           />
-          <span className="text-ink-mute mt-1 block text-xs">
-            With country code. Your guide uses it on the day.
-          </span>
+          <span className="text-ink-mute mt-1 block text-xs">{t("phoneHint")}</span>
         </label>
         <label>
-          <span className="label">Country of residence</span>
+          <span className="label">{t("country")}</span>
           <input name="country" autoComplete="country-name" className="field" />
         </label>
         {needsPickup && (
           <label>
             <span className="label">{pickupLabel}</span>
-            <input name="pickup" placeholder="Hotel name or address" className="field" />
-            <span className="text-ink-mute mt-1 block text-xs">
-              Not sure yet? Leave blank and tell us later.
-            </span>
+            <input name="pickup" placeholder={t("pickupPlaceholder")} className="field" />
+            <span className="text-ink-mute mt-1 block text-xs">{t("pickupHint")}</span>
           </label>
         )}
         <label className="sm:col-span-2">
           <span className="label">
-            Anything we should know? <span className="text-ink-mute font-normal">(optional)</span>
+            {t("notes")} <span className="text-ink-mute font-normal">{t("optional")}</span>
           </span>
-          <textarea
-            name="notes"
-            rows={3}
-            className="field"
-            placeholder="Flight number, dietary needs, mobility, celebrations…"
-          />
+          <textarea name="notes" rows={3} className="field" placeholder={t("notesPlaceholder")} />
         </label>
         <input name="website" tabIndex={-1} autoComplete="off" className="hidden" aria-hidden />
       </div>
@@ -165,15 +159,17 @@ export function CheckoutForm({
           className="mt-0.5 h-4 w-4 shrink-0 accent-[var(--color-lapis)]"
         />
         <span>
-          I agree to the{" "}
-          <Link
-            href="/booking-terms"
-            target="_blank"
-            className="text-lapis font-semibold underline-offset-2 hover:underline"
-          >
-            booking terms and cancellation policy
-          </Link>
-          .
+          {t.rich("terms", {
+            link: (chunks) => (
+              <Link
+                href="/booking-terms"
+                target="_blank"
+                className="text-lapis font-semibold underline-offset-2 hover:underline"
+              >
+                {chunks}
+              </Link>
+            ),
+          })}
         </span>
       </label>
 
@@ -184,23 +180,27 @@ export function CheckoutForm({
       )}
 
       <div>
-        <span className="label">Promo code</span>
+        <span className="label">{t("promoCode")}</span>
         <div className="flex gap-2">
           <input
             value={promoInput}
             onChange={(e) => setPromoInput(e.target.value.toUpperCase())}
             className="field uppercase"
             maxLength={40}
-            aria-label="Promo code"
+            aria-label={t("promoCode")}
           />
           <button type="button" onClick={applyPromo} className="btn btn-ghost shrink-0">
-            Apply
+            {t("apply")}
           </button>
         </div>
         {promo && (
           <p role="status" className="text-faience mt-1.5 text-sm">
-            {promo.code} applied: −{formatCents(promo.discountCents, currency, rates, { decimals: true })}.
-            New total <b>{formatCents(promo.totalCents, currency, rates, { decimals: true })}</b>.
+            {t.rich("promoApplied", {
+              code: promo.code,
+              discount: formatCents(promo.discountCents, currency, rates, { decimals: true }),
+              total: formatCents(promo.totalCents, currency, rates, { decimals: true }),
+              b: (chunks) => <b>{chunks}</b>,
+            })}
           </p>
         )}
         {promoError && (
@@ -211,11 +211,9 @@ export function CheckoutForm({
       </div>
       <Turnstile />
       <button className="btn btn-primary w-full py-4 text-base sm:w-auto sm:px-10" disabled={sending}>
-        {sending ? "Sending request…" : "Send booking request"}
+        {sending ? t("sending") : t("submit")}
       </button>
-      <p className="text-ink-mute text-sm">
-        You won't be charged now. We confirm availability within 24 hours.
-      </p>
+      <p className="text-ink-mute text-sm">{t("noCharge")}</p>
     </form>
   );
 }

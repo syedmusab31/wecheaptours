@@ -254,7 +254,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
               <ul className="mt-5 space-y-6">
                 {reviews.map((r) => (
                   <li key={r.id}>
-                    <p aria-label={`${r.rating} out of 5 stars`} className="text-sun">
+                    <p role="img" aria-label={`${r.rating} out of 5 stars`} className="text-sun">
                       {"★".repeat(r.rating)}
                       <span className="text-line">{"★".repeat(5 - r.rating)}</span>
                     </p>
@@ -292,6 +292,7 @@ export default async function ProductPage({ params, searchParams }: Props) {
               minGuests: o.minGuests,
               maxGuests: o.maxGuests,
             }))}
+            tiers={p.guestTiers}
             addons={extras.addons.map((a) => ({
               id: a.id,
               name: a.name,

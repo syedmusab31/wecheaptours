@@ -6,7 +6,16 @@ import tseslint from "typescript-eslint";
 const compat = new FlatCompat({ baseDirectory: dirname(fileURLToPath(import.meta.url)) });
 
 export default tseslint.config(
-  { ignores: [".next/**", "node_modules/**", "coverage/**", "next-env.d.ts"] },
+  {
+    ignores: [
+      ".next/**",
+      "node_modules/**",
+      "coverage/**",
+      "next-env.d.ts",
+      "playwright-report/**",
+      "test-results/**",
+    ],
+  },
   ...compat.extends("next/core-web-vitals", "next/typescript"),
   {
     rules: {
@@ -105,6 +114,8 @@ export default tseslint.config(
       "scripts/**",
       "vitest.config.ts",
       "drizzle.config.ts",
+      "playwright.config.ts",
+      "e2e/**",
     ],
     rules: { "no-restricted-syntax": "off" },
   },

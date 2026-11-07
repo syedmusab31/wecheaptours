@@ -20,6 +20,7 @@ export const priceUnitEnum = pgEnum("price_unit", ["person", "group", "night", "
 export const addonUnitEnum = pgEnum("addon_unit", ["person", "booking"]);
 
 export type ItineraryStep = { time?: string; title: string; detail?: string };
+export type GuestTier = { key: string; label: string; share: number };
 
 /** Countries we sell in. Adding one is an admin task, not a code change. */
 export const countries = pgTable("countries", {
@@ -87,6 +88,8 @@ export const products = pgTable(
     bedrooms: integer("bedrooms"),
     /** Stays: minimum nights */
     minNights: integer("min_nights").notNull().default(1),
+    /** Extra guest types on per-person prices, e.g. [{ key: "senior", label: "Senior (65+)", share: 0.8 }] */
+    guestTiers: jsonb("guest_tiers").$type<GuestTier[]>().notNull().default([]),
     rating: numeric("rating", { precision: 2, scale: 1 }).notNull().default("0"),
     reviewCount: integer("review_count").notNull().default(0),
     isFeatured: boolean("is_featured").notNull().default(false),

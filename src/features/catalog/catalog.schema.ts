@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { slugify } from "@/lib/utils";
 import { formCheckbox, formInt, formLines, formList, formText } from "@/lib/validation";
-import { categoryEnum, priceUnitEnum, type ItineraryStep } from "@/server/db/schema";
+import { categoryEnum, priceUnitEnum, type GuestTier, type ItineraryStep } from "@/server/db/schema";
 
 /** Hosts we serve images from (see next.config.ts `images.remotePatterns`) */
 export const IMAGE_HOSTS = ["res.cloudinary.com", "images.unsplash.com"];
@@ -66,6 +66,22 @@ export function parseItinerary(lines: string[]): ItineraryStep[] {
   });
 }
 
+/**
+ * Guest-tier textarea: one per line, "Label | percent of the adult price", e.g. "Senior (65+) | 80".
+ * Lines that don't parse are skipped.
+ */
+export function parseGuestTiers(lines: string[]): GuestTier[] {
+  const tiers: GuestTier[] = [];
+  for (const line of lines.slice(0, 6)) {
+    const [label, percent] = line.split("|").map((s) => s.trim());
+    const share = Number(percent) / 100;
+    const key = slugify(label ?? "").slice(0, 30);
+    if (!label || !key || !(share > 0 && share <= 1) || tiers.some((t) => t.key === key)) continue;
+    tiers.push({ key, label: label.slice(0, 40), share: Math.round(share * 100) / 100 });
+  }
+  return tiers;
+}
+
 const SLUG = /^[a-z0-9-]+$/;
 
 export const productFormSchema = z
@@ -99,6 +115,7 @@ export const productFormSchema = z
     pickupIncluded: formCheckbox(),
     bedrooms: formInt(null, z.number().int().min(0)),
     minNights: formInt(1, z.number().int().min(1)),
+    guestTiers: formLines().transform(parseGuestTiers),
     isFeatured: formCheckbox(),
     isActive: formCheckbox(),
   })

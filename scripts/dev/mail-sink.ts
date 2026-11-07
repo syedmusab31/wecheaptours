@@ -26,6 +26,18 @@ function decode(raw: string): string {
   return Buffer.from(bytes).toString("utf8");
 }
 
+/** Decodes a header that may be folded over lines and contain RFC 2047 words (=?UTF-8?Q?...?= / ?B?) */
+function decodeHeader(value: string): string {
+  return value
+    .replace(/\r?\n[ \t]+/g, " ")
+    .replace(/\?=\s+=\?/g, "?==?")
+    .replace(/=\?([^?]+)\?([QB])\?([^?]*)\?=/gi, (_, _charset: string, enc: string, data: string) =>
+      enc.toUpperCase() === "B"
+        ? Buffer.from(data, "base64").toString("utf8")
+        : decode(data.replace(/_/g, " ")),
+    );
+}
+
 const server = new SMTPServer({
   authOptional: true,
   allowInsecureAuth: true,
@@ -36,7 +48,7 @@ const server = new SMTPServer({
     stream.on("data", (chunk: Buffer) => (raw += chunk.toString("utf8")));
     stream.on("end", () => {
       const text = decode(raw);
-      const subject = /^Subject: (.*)$/m.exec(text)?.[1] ?? "(no subject)";
+      const subject = decodeHeader(/^Subject: (.*(?:\r?\n[ \t].*)*)$/m.exec(raw)?.[1] ?? "(no subject)");
       const to = session.envelope.rcptTo.map((r) => r.address);
       const body = text
         .split(/\r?\n\r?\n/)

@@ -99,6 +99,18 @@ async function main() {
 
   // Demo pricing extras, a calendar and a promo code: only once, on a fresh database
   const giza = productId.get("giza-pyramids-sphinx-day-tour");
+  // Demo senior and student prices (safe to re-run)
+  if (giza) {
+    await db
+      .update(products)
+      .set({
+        guestTiers: [
+          { key: "senior-65", label: "Senior (65+)", share: 0.8 },
+          { key: "student-with-id", label: "Student (with ID)", share: 0.75 },
+        ],
+      })
+      .where(eq(products.id, giza));
+  }
   const [{ optionCount }] = await db.select({ optionCount: sql<number>`count(*)::int` }).from(productOptions);
   if (giza && optionCount === 0) {
     await db.insert(productOptions).values([

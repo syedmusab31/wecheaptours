@@ -6,6 +6,8 @@ import {
   canCancelFree,
   earliestDate,
   latestDate,
+  paymentText,
+  shortCancellation,
 } from "./booking-policy";
 import { quote, seatsNeeded, type QuoteInput } from "./pricing";
 
@@ -223,5 +225,56 @@ describe("date helpers", () => {
   it("describes cancellation in days or hours", () => {
     expect(cancellationText("cruise")).toMatch(/14 days/);
     expect(cancellationText("tour")).toMatch(/24 hours/);
+  });
+});
+
+describe("quote: senior, student and other guest tiers", () => {
+  const tiers = [
+    { key: "senior", label: "Senior (65+)", share: 0.8 },
+    { key: "student", label: "Student", share: 0.75 },
+  ];
+
+  it("prices each tier as its share of the adult price", () => {
+    const q = ok(tour({ adults: 1, tiers, tierGuests: { senior: 2, student: 1 } }));
+    expect(q.lines.map((l) => l.amountCents)).toEqual([4000, 6400, 3000]);
+    expect(q).toMatchObject({ totalCents: 13400, seats: 4, units: 4 });
+  });
+
+  it("lets a group of seniors book without a regular adult", () => {
+    expect(quote(tour({ adults: 0, tiers, tierGuests: { senior: 2 } }), NOW).ok).toBe(true);
+    expect(quote(tour({ adults: 0, children: 1, tiers, tierGuests: {} }), NOW).ok).toBe(false);
+  });
+
+  it("counts tier guests toward the group limits and per-person extras", () => {
+    expect(quote(tour({ maxGuests: 3, adults: 2, tiers, tierGuests: { senior: 2 } }), NOW).ok).toBe(false);
+    const q = ok(
+      tour({
+        adults: 1,
+        tiers,
+        tierGuests: { senior: 1 },
+        addons: [{ id: 1, name: "Lunch", priceCents: 1000, unit: "person" }],
+      }),
+    );
+    expect(q.lines.at(-1)).toEqual({ label: "Lunch × 2", amountCents: 2000 });
+  });
+
+  it("ignores unknown tiers, bad counts, and tiers on flat prices", () => {
+    const q = ok(tour({ adults: 2, tiers, tierGuests: { ghost: 3, senior: -1, student: 1.7 } }));
+    expect(q.lines.map((l) => l.amountCents)).toEqual([8000, 3000]); // 1.7 → 1 student
+    const flat = ok(
+      tour({ priceUnit: "group", priceCents: 9000, adults: 1, tiers, tierGuests: { senior: 3 } }),
+    );
+    expect(flat).toMatchObject({ totalCents: 9000, seats: 1 });
+  });
+});
+
+describe("policy wording", () => {
+  it("states the short cancellation rule in hours or days", () => {
+    expect(shortCancellation("tour")).toBe("Free cancellation up to 24h before");
+    expect(shortCancellation("package")).toBe("Free cancellation up to 21 days before");
+  });
+  it("explains when payment is due", () => {
+    expect(paymentText("tour")).toMatch(/Pay on the day/);
+    expect(paymentText("cruise")).toMatch(/20% deposit/);
   });
 });

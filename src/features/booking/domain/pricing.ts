@@ -20,6 +20,9 @@ export type PricingRule = {
 
 export type SelectedAddon = { id: number; name: string; priceCents: number; unit: AddonUnit };
 
+/** An extra guest type priced as a share of the adult price, e.g. Senior (65+) at 0.8 */
+export type GuestTier = { key: string; label: string; share: number };
+
 export type PromoDiscount = { code: string; percentOff?: number | null; amountOffCents?: number | null };
 
 export type QuoteInput = {
@@ -34,6 +37,9 @@ export type QuoteInput = {
   adults: number;
   children: number;
   infants: number;
+  /** Per-person products only: the product's tiers and how many guests of each */
+  tiers?: GuestTier[];
+  tierGuests?: Record<string, number>;
   rules?: PricingRule[];
   addons?: SelectedAddon[];
   promo?: PromoDiscount | null;
@@ -76,8 +82,18 @@ function ruleMatches(rule: PricingRule, date: string, guests: number): boolean {
 }
 
 /** Seats a booking needs from each slot: people for per-person prices, else one unit (car, group, property). */
-export function seatsNeeded(priceUnit: PriceUnit, adults: number, children: number): number {
-  return priceUnit === "person" ? adults + children : 1;
+export function seatsNeeded(priceUnit: PriceUnit, adults: number, children: number, tierGuests = 0): number {
+  return priceUnit === "person" ? adults + children + tierGuests : 1;
+}
+
+/** Guests per tier, ignoring unknown tiers and negative or fractional counts */
+export function countTierGuests(
+  tiers: GuestTier[] = [],
+  counts: Record<string, number> = {},
+): { tier: GuestTier; count: number }[] {
+  return tiers
+    .map((tier) => ({ tier, count: Math.max(0, Math.floor(Number(counts[tier.key]) || 0)) }))
+    .filter((t) => t.count > 0);
 }
 
 export function quote(input: QuoteInput, now = new Date(), opts: { graceDays?: number } = {}): Quote {
@@ -86,9 +102,12 @@ export function quote(input: QuoteInput, now = new Date(), opts: { graceDays?: n
   const adults = Math.max(0, Math.floor(input.adults));
   const children = Math.max(0, Math.floor(input.children));
   const infants = Math.max(0, Math.floor(input.infants));
-  const payingGuests = adults + children;
+  // Tiers (senior, student…) exist only on per-person prices
+  const tierLines = priceUnit === "person" ? countTierGuests(input.tiers, input.tierGuests) : [];
+  const tierCount = tierLines.reduce((s, t) => s + t.count, 0);
+  const payingGuests = adults + children + tierCount;
 
-  if (adults < 1) return { ok: false, error: "At least one adult is required." };
+  if (adults + tierCount < 1) return { ok: false, error: "At least one adult is required." };
   if (!/^\d{4}-\d{2}-\d{2}$/.test(input.travelDate)) return { ok: false, error: "Choose a travel date." };
   if (input.travelDate < earliestDate(category, now)) {
     const h = RULES[category].leadHours;
@@ -142,6 +161,13 @@ export function quote(input: QuoteInput, now = new Date(), opts: { graceDays?: n
           amountCents: children * childCents,
         });
       }
+      for (const { tier, count } of tierLines) {
+        const tierCents = Math.round(priceCents * tier.share);
+        lines.push({
+          label: `${count} × ${tier.label} × ${dollars(tierCents)}`,
+          amountCents: count * tierCents,
+        });
+      }
       if (infants > 0) lines.push({ label: `${plural(infants, "infant")} (0–3)`, amountCents: 0 });
       units = payingGuests;
       unitLabel = "guests";
@@ -190,7 +216,7 @@ export function quote(input: QuoteInput, now = new Date(), opts: { graceDays?: n
     discountCents,
     totalCents,
     depositCents,
-    seats: seatsNeeded(priceUnit, adults, children),
+    seats: seatsNeeded(priceUnit, adults, children, tierCount),
     dates,
   };
 }

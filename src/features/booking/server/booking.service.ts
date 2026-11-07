@@ -12,13 +12,13 @@ import { redeemPromoCode, validatePromoCode } from "@/features/promotion/server/
 import { getSettings } from "@/features/settings/server/settings.service";
 import type { Currency } from "@/lib/money";
 import { isUniqueViolation } from "@/server/db/errors";
-import type { Booking, BookingStatus, Product, ProductOption } from "@/server/db/schema";
+import type { Booking, BookedTier, BookingStatus, Product, ProductOption } from "@/server/db/schema";
 import { withTransaction } from "@/server/db/transaction";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { logger } from "@/server/logger";
 import { canCancelFree } from "../domain/booking-policy";
 import { IllegalTransitionError, assertTransition, releasesSeats } from "../domain/booking-status";
-import { quote, type Quote } from "../domain/pricing";
+import { countTierGuests, quote, type Quote } from "../domain/pricing";
 import type { CreateBookingInput, QuoteRequest } from "../booking.schema";
 import { bookingPath, verifyBookingAccessToken } from "./booking-access";
 import { enqueueBookingEmail, enqueueReviewRequest } from "./booking.jobs";
@@ -39,6 +39,7 @@ type PricedSelection = {
   quote: Extract<Quote, { ok: true }>;
   promo: { id: number; code: string } | null;
   addons: { id: number; name: string; quantity: number; amountCents: number }[];
+  tierGuests: BookedTier[];
 };
 
 /**
@@ -75,6 +76,8 @@ export async function priceSelection(input: QuoteRequest, now = new Date()): Pro
       adults: input.adults,
       children: input.children,
       infants: input.infants,
+      tiers: product.guestTiers,
+      tierGuests: input.tierGuests,
       rules,
       addons,
       promo: promo
@@ -87,10 +90,13 @@ export async function priceSelection(input: QuoteRequest, now = new Date()): Pro
   );
   if (!priced.ok) throw new ValidationError(priced.error);
 
-  const payingGuests = input.adults + input.children;
+  const tierGuests =
+    basis.priceUnit === "person" ? countTierGuests(product.guestTiers, input.tierGuests) : [];
+  const payingGuests = input.adults + input.children + tierGuests.reduce((n, t) => n + t.count, 0);
   return {
     product,
     option,
+    tierGuests: tierGuests.map(({ tier, count }) => ({ key: tier.key, label: tier.label, count })),
     quote: priced,
     promo: promo ? { id: promo.id, code: promo.code } : null,
     addons: addons.map((a) => {
@@ -136,7 +142,7 @@ async function findRepeat(input: CreateBookingInput): Promise<Booking | null> {
 }
 
 async function insertNewBooking(input: CreateBookingInput, now: Date): Promise<Booking> {
-  const { product, option, quote: q, promo, addons } = await priceSelection(input, now);
+  const { product, option, quote: q, promo, addons, tierGuests } = await priceSelection(input, now);
   const { rates } = await getSettings();
   const displayCurrency = input.displayCurrency as Currency;
 
@@ -169,6 +175,7 @@ async function insertNewBooking(input: CreateBookingInput, now: Date): Promise<B
               adults: input.adults,
               children: input.children,
               infants: input.infants,
+              tierGuests,
               units: q.units,
               unitPriceCents: (option ?? product).priceCents,
               subtotalCents: q.subtotalCents,

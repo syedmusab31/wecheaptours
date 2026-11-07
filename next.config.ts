@@ -1,5 +1,6 @@
 import { withSentryConfig } from "@sentry/nextjs";
 import type { NextConfig } from "next";
+import createNextIntlPlugin from "next-intl/plugin";
 import { validateEnv } from "./src/config/env";
 
 // Fail fast: a missing or short secret stops `next build` / `next dev` with a readable list.
@@ -37,13 +38,16 @@ const nextConfig: NextConfig = {
   },
 };
 
+// Translations: loads messages/<locale>.json for each request (src/i18n/request.ts)
+const withNextIntl = createNextIntlPlugin("./src/i18n/request.ts");
+
 // Source maps are uploaded to Sentry only when CI provides SENTRY_AUTH_TOKEN.
 export default process.env.SENTRY_AUTH_TOKEN
-  ? withSentryConfig(nextConfig, {
+  ? withSentryConfig(withNextIntl(nextConfig), {
       org: process.env.SENTRY_ORG,
       project: process.env.SENTRY_PROJECT,
       authToken: process.env.SENTRY_AUTH_TOKEN,
       silent: true,
       sourcemaps: { deleteSourcemapsAfterUpload: true },
     })
-  : nextConfig;
+  : withNextIntl(nextConfig);

@@ -405,7 +405,7 @@ export default async function HomePage() {
                   key={r.id}
                   className="border-line flex flex-col rounded-[var(--radius-card)] border p-6"
                 >
-                  <p className="flex gap-0.5" aria-label={`${r.rating} out of 5 stars`}>
+                  <p className="flex gap-0.5" role="img" aria-label={`${r.rating} out of 5 stars`}>
                     {Array.from({ length: 5 }, (_, i) => (
                       <Star
                         key={i}

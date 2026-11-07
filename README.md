@@ -3,10 +3,12 @@
 Booking website for Egypt & Jordan day trips, Nile cruises, transfers, stays and packages, with a custom admin panel.
 
 - **Frontend + backend:** Next.js 15 (App Router). Pages are React server components; the backend is Node.js API routes (`src/app/api`) and server actions. Everything deploys to Vercel as one project.
-- **Database:** PostgreSQL through Drizzle ORM (`src/db/schema.ts`).
+- **Database:** PostgreSQL through Drizzle ORM (`src/server/db/schema/`).
 - **Images:** Cloudinary (uploads from the admin panel, resized on the fly). Demo photos come from Unsplash.
 - **Email:** any SMTP provider through Nodemailer. If SMTP isn't set, emails are printed in the terminal.
-- **Payments:** not integrated yet. Guests send a _booking request_, you confirm it in the admin panel, and payment happens after confirmation (cash, card or bank transfer).
+- **Payments:** guests send a _booking request_, you confirm it in the admin panel, and payment happens after confirmation: online through Stripe or Paymob when configured (see [Payments](#payments)), or cash, card or bank transfer recorded in the admin.
+
+**Documentation:** [architecture](docs/ARCHITECTURE.md) (C4 diagrams, key flows), [decision records](docs/adr/README.md), [public API (OpenAPI)](docs/api/openapi.yaml), and [local setup, test environment and manual test plan](docs/LOCAL_SETUP_AND_TEST_PLAN.md).
 
 ## What's included
 
@@ -78,9 +80,10 @@ npm run check          # lint + typecheck + format check + unit tests (what CI r
 npm test               # unit tests; integration tests also run when TEST_DATABASE_URL is set:
 TEST_DATABASE_URL=postgres://postgres:postgres@localhost:5432/wecheaptours_test npm test
 npm run format         # Prettier (a pre-commit hook formats staged files)
+npm run build && npm run test:e2e   # browser tests (Playwright + axe); needs a seeded database
 ```
 
-CI (`.github/workflows/ci.yml`) runs lint, typecheck, format check, unit + integration tests (against a Postgres service) and `next build` on every pull request.
+CI (`.github/workflows/ci.yml`) runs lint, typecheck, format check, unit + integration tests (against a Postgres service) and `next build` on every pull request. A second job seeds a fresh database and runs the end-to-end suite in Chromium: a guest books, an admin signs in with the emailed code and confirms, the guest sees it confirmed; plus smoke and WCAG 2.1 AA accessibility checks. See [the test plan](docs/LOCAL_SETUP_AND_TEST_PLAN.md#3-automated-checks).
 
 Environment variables are validated at startup by `src/config/env.ts`; see `.env.example` for the full list.
 
@@ -141,4 +144,8 @@ tests/integration/     service tests against a real Postgres
 
 ## Payments
 
-Online payment is built in with Stripe and off until `STRIPE_SECRET_KEY` and `STRIPE_WEBHOOK_SECRET` are set. Once a booking is confirmed, the guest gets a "Pay deposit" link; the webhook (`/api/webhooks/stripe`, event `checkout.session.completed`) records the payment once, even if Stripe sends it twice. Cash and bank transfers are recorded on the admin booking page. Other providers (Paymob, PayPal) plug into `src/features/payment/payment.types.ts`.
+Online payment is off until a provider is configured; until then guests pay on the day or by bank transfer, recorded on the admin booking page. Once a booking is confirmed, the guest gets a "Pay the deposit" link. Webhooks record each payment once, even when the provider sends it twice, and refunds go back through the provider that took the money.
+
+- **Stripe** (cards in USD/EUR/GBP): `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`; webhook `https://<your domain>/api/webhooks/stripe`, event `checkout.session.completed`.
+- **Paymob** (Egypt: cards, Meeza, mobile wallets, installments in EGP): `PAYMOB_SECRET_KEY`, `PAYMOB_PUBLIC_KEY`, `PAYMOB_HMAC_SECRET`, `PAYMOB_INTEGRATION_IDS`; transaction-processed callback `https://<your domain>/api/webhooks/paymob`. The USD amount due is converted with the EGP rate from Admin → Settings when the checkout opens; payments are recorded in USD with the EGP charged kept for refunds.
+- With both configured, `PAYMENT_PROVIDER=stripe|paymob` picks the one for checkouts. Other providers plug into `src/features/payment/payment.types.ts`.

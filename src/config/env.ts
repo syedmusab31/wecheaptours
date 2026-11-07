@@ -44,6 +44,24 @@ const schema = z
 
     STRIPE_SECRET_KEY: optional,
     STRIPE_WEBHOOK_SECRET: optional,
+    /** Paymob (Egypt): cards, wallets, installments in EGP */
+    PAYMOB_SECRET_KEY: optional,
+    PAYMOB_PUBLIC_KEY: optional,
+    PAYMOB_HMAC_SECRET: optional,
+    /** Comma-separated integration ids from the Paymob dashboard (card, wallet…) */
+    PAYMOB_INTEGRATION_IDS: z
+      .string()
+      .optional()
+      .transform((v) =>
+        (v ?? "")
+          .split(",")
+          .map((s) => Number(s.trim()))
+          .filter((n) => Number.isInteger(n) && n > 0),
+      ),
+    PAYMOB_CURRENCY: z.string().length(3).default("EGP"),
+    PAYMOB_API_URL: z.string().url().default("https://accept.paymob.com"),
+    /** Which provider new checkouts use when both are configured */
+    PAYMENT_PROVIDER: z.enum(["stripe", "paymob"]).optional(),
 
     TURNSTILE_SECRET_KEY: optional,
     NEXT_PUBLIC_TURNSTILE_SITE_KEY: optional,
@@ -72,6 +90,23 @@ const schema = z
         code: "custom",
         path: ["STRIPE_WEBHOOK_SECRET"],
         message: "Set both STRIPE_SECRET_KEY and STRIPE_WEBHOOK_SECRET, or neither",
+      });
+    }
+    const paymob = [e.PAYMOB_SECRET_KEY, e.PAYMOB_PUBLIC_KEY, e.PAYMOB_HMAC_SECRET].filter(Boolean).length;
+    if (paymob > 0 && (paymob < 3 || !e.PAYMOB_INTEGRATION_IDS.length)) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["PAYMOB_SECRET_KEY"],
+        message:
+          "Paymob needs PAYMOB_SECRET_KEY, PAYMOB_PUBLIC_KEY, PAYMOB_HMAC_SECRET and PAYMOB_INTEGRATION_IDS together",
+      });
+    }
+    if (e.STRIPE_SECRET_KEY && paymob === 3 && !e.PAYMENT_PROVIDER) {
+      ctx.addIssue({
+        code: "custom",
+        path: ["PAYMENT_PROVIDER"],
+        message:
+          "Both Stripe and Paymob are set: choose one for checkouts with PAYMENT_PROVIDER=stripe|paymob",
       });
     }
     if (e.NODE_ENV === "production" && !e.SMTP_HOST) {

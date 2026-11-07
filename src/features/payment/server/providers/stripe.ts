@@ -108,9 +108,9 @@ export class StripeProvider implements PaymentProvider {
     };
   }
 
-  async refund({ providerRef, amountCents }: { providerRef: string; amountCents: number }) {
+  async refund({ payment, amountCents }: Parameters<PaymentProvider["refund"]>[0]) {
     const refund = await this.call<{ id: string }>("/refunds", {
-      payment_intent: providerRef,
+      payment_intent: payment.providerRef,
       amount: String(amountCents),
     });
     return { refundRef: refund.id };

@@ -68,6 +68,7 @@ export function FilterPanel({
         <p className={legend}>Destination</p>
         <select
           className="field"
+          aria-label="Destination"
           value={sp.get("where") ?? ""}
           onChange={(e) =>
             update((q) => (e.target.value ? q.set("where", e.target.value) : q.delete("where")))

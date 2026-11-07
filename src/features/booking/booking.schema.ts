@@ -11,9 +11,14 @@ export const createBookingSchema = z.object({
   promoCode: z.string().trim().max(40).nullish(),
   travelDate: isoDate,
   endDate: isoDate.optional().nullable().or(z.literal("")),
-  adults: z.coerce.number().int().min(1).max(50),
+  // 0 is allowed when other guest types (senior, student…) are booked; pricing requires one paying adult or tier guest
+  adults: z.coerce.number().int().min(0).max(50),
   children: z.coerce.number().int().min(0).max(50).default(0),
   infants: z.coerce.number().int().min(0).max(20).default(0),
+  /** Guests per tier key (senior, student…), only for products that define tiers */
+  tierGuests: z
+    .record(z.string().regex(/^[a-z0-9-]{1,30}$/), z.coerce.number().int().min(0).max(50))
+    .default({}),
   customerName: z.string().trim().min(2, "Enter your full name").max(160),
   email: z.string().trim().toLowerCase().email("Enter a valid email address").max(200),
   phone: z.string().trim().min(6, "Enter a phone or WhatsApp number").max(40),
@@ -28,7 +33,10 @@ export const createBookingSchema = z.object({
   /** One per checkout attempt (a UUID made in the browser); repeats return the first booking */
   idempotencyKey: z.string().uuid("Invalid request key").nullish(),
 });
-export type CreateBookingInput = z.infer<typeof createBookingSchema>;
+/** tierGuests is optional for callers (defaults to none) */
+export type CreateBookingInput = Omit<z.infer<typeof createBookingSchema>, "tierGuests"> & {
+  tierGuests?: Record<string, number>;
+};
 
 /** Body of POST /api/v1/quote: the same selection, priced without booking */
 export const quoteRequestSchema = createBookingSchema.pick({
@@ -41,8 +49,11 @@ export const quoteRequestSchema = createBookingSchema.pick({
   adults: true,
   children: true,
   infants: true,
+  tierGuests: true,
 });
-export type QuoteRequest = z.infer<typeof quoteRequestSchema>;
+export type QuoteRequest = Omit<z.infer<typeof quoteRequestSchema>, "tierGuests"> & {
+  tierGuests?: Record<string, number>;
+};
 
 /** Admin form: move a booking to another status and/or edit internal notes */
 export const updateBookingStatusSchema = z.object({

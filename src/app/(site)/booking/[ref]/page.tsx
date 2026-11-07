@@ -12,7 +12,8 @@ import { CATEGORY_META } from "@/features/catalog/catalog.constants";
 import { nightsBetween } from "@/lib/dates";
 import { getSettings } from "@/features/settings/server/settings.service";
 import { formatDate } from "@/lib/utils";
-import { env } from "@/config/env";
+import { describeGuests } from "@/features/booking/domain/guests";
+import { onlinePaymentsEnabled } from "@/features/payment/server/payment-config";
 
 export const metadata: Metadata = { title: "Your booking", robots: { index: false } };
 
@@ -82,8 +83,8 @@ export default async function BookingPage({ params, searchParams }: Props) {
   if (!row) notFound();
   const b = row.booking;
   const s = STATUS[b.status];
-  // Online payment shows once we've confirmed and when Stripe is set up
-  const due = b.status === "confirmed" && env.STRIPE_SECRET_KEY ? amountDue(b) : null;
+  // Online payment shows once we've confirmed and when a provider (Stripe or Paymob) is set up
+  const due = b.status === "confirmed" && onlinePaymentsEnabled() ? amountDue(b) : null;
   const { contact } = await getSettings();
 
   return (
@@ -129,11 +130,7 @@ export default async function BookingPage({ params, searchParams }: Props) {
         </div>
         <div>
           <dt className="text-ink-mute text-sm">Guests</dt>
-          <dd className="font-semibold">
-            {b.adults} adult{b.adults > 1 ? "s" : ""}
-            {b.children ? `, ${b.children} children` : ""}
-            {b.infants ? `, ${b.infants} infants` : ""}
-          </dd>
+          <dd className="font-semibold">{describeGuests(b)}</dd>
         </div>
         <div>
           <dt className="text-ink-mute text-sm">Total</dt>

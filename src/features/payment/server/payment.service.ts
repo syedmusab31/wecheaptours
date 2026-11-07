@@ -9,17 +9,12 @@ import { withTransaction } from "@/server/db/transaction";
 import { NotFoundError, ValidationError } from "@/server/errors";
 import { logger } from "@/server/logger";
 import { amountDue, summarisePayments } from "../domain/payment-status";
-import type { PaymentEvent, PaymentProvider } from "../payment.types";
+import type { PaymentEvent } from "../payment.types";
 import * as paymentRepository from "./payment.repository";
-import { StripeProvider } from "./providers/stripe";
-import { env } from "@/config/env";
+import { checkoutProvider, providerByName } from "./providers";
+import { getSettings } from "@/features/settings/server/settings.service";
 
-/** The configured online provider, or null when online payment is off */
-export function onlineProvider(): PaymentProvider | null {
-  const key = env.STRIPE_SECRET_KEY;
-  const webhook = env.STRIPE_WEBHOOK_SECRET;
-  return key && webhook ? new StripeProvider(key, webhook) : null;
-}
+export { providerByName } from "./providers";
 
 /** Records a payment (or refund) once and recalculates what the booking has paid */
 export async function recordPayment(event: PaymentEvent) {
@@ -58,7 +53,7 @@ export async function recordPayment(event: PaymentEvent) {
 
 /** Guest "Pay deposit" link: opens a checkout for whatever is due next */
 export async function startGuestCheckout(reference: string, token: string): Promise<string> {
-  const provider = onlineProvider();
+  const provider = checkoutProvider();
   if (!provider)
     throw new ValidationError("Online payment isn't available. We'll send payment details by email.");
   const row = await getGuestBooking(reference, token);
@@ -75,6 +70,7 @@ export async function startGuestCheckout(reference: string, token: string): Prom
     kind: due.kind,
     successUrl: `${back}&paid=1`,
     cancelUrl: back,
+    rates: (await getSettings()).rates,
   });
   return url;
 }
@@ -110,12 +106,10 @@ export async function refund(input: {
   const online = records
     .filter((r) => r.provider !== "manual" && r.kind !== "refund" && r.status === "succeeded")
     .at(-1);
-  const provider = onlineProvider();
+  // Refund through the provider that took the money
+  const provider = online ? providerByName(online.provider) : null;
   if (online && provider) {
-    const { refundRef } = await provider.refund({
-      providerRef: online.providerRef,
-      amountCents: input.amountCents,
-    });
+    const { refundRef } = await provider.refund({ payment: online, amountCents: input.amountCents });
     return recordPayment({
       provider: provider.name,
       providerRef: refundRef,

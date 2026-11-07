@@ -12,6 +12,7 @@ import { listPayments } from "@/features/payment/server/payment.service";
 import { nightsBetween } from "@/lib/dates";
 import { formatCentsExact } from "@/lib/money";
 import { formatDate } from "@/lib/utils";
+import { describeGuests } from "@/features/booking/domain/guests";
 
 const ACTOR = { guest: "Guest", admin: "Staff", system: "System" } as const;
 
@@ -42,7 +43,7 @@ export default async function BookingDetail({ params }: { params: Promise<{ id: 
         ? `${formatDate(b.travelDate)} – ${formatDate(b.endDate)} (${nightsBetween(b.travelDate, b.endDate)} nights)`
         : formatDate(b.travelDate, true),
     ],
-    ["Guests", `${b.adults} adults, ${b.children} children (4–11), ${b.infants} infants`],
+    ["Guests", describeGuests(b)],
     ["Pickup", b.pickupLocation || "—"],
     ["Guest notes", b.notes || "—"],
     [

@@ -1,0 +1,343 @@
+openapi: 3.1.0
+info:
+  title: WeCheapTours public API
+  version: "1.0.0"
+  summary: Search the catalogue, read availability and price a selection.
+  description: |
+    Read-only JSON endpoints for a mobile app or partners. They return the same data the website uses.
+
+    - Amounts are integer **cents** in the product's currency (USD). Display conversion is the client's job.
+    - Dates are `YYYY-MM-DD`, in Cairo time.
+    - No authentication. The endpoints aren't rate limited today, but clients should handle a `429` response
+      by waiting the seconds in its `Retry-After` header.
+    - Errors are `{ "error": "<message for people>", "code": "<machine code>" }` (`code` is present for
+      application errors).
+
+    Bookings are created through the website checkout (`POST /api/bookings`), which needs a bot check and is not
+    part of this public API.
+  contact:
+    name: WeCheapTours
+    url: https://wecheaptours.com/enquire
+servers:
+  - url: https://wecheaptours.com/api/v1
+    description: Production
+  - url: http://localhost:3000/api/v1
+    description: Local development
+
+# The public endpoints need no credentials
+security: []
+
+tags:
+  - name: Catalogue
+    description: Products (tours, cruises, transfers, stays, packages).
+  - name: Availability
+    description: Dates and seats for products sold from a calendar.
+  - name: Pricing
+    description: Server-side prices, identical to what a booking would charge.
+
+paths:
+  /products:
+    get:
+      tags: [Catalogue]
+      operationId: searchProducts
+      summary: Search products
+      description: The same filters as the website's /search page. Unknown or invalid filters are ignored.
+      parameters:
+        - name: type
+          in: query
+          description: Category, or `all`.
+          schema: { type: string, enum: [all, tour, cruise, transfer, stay, package], default: all }
+        - name: q
+          in: query
+          description: Free text (typo tolerant), up to 80 characters.
+          schema: { type: string, maxLength: 80 }
+        - name: where
+          in: query
+          description: Destination slug, e.g. `giza`.
+          schema: { type: string, pattern: "^[a-z0-9-]+$" }
+        - name: country
+          in: query
+          schema: { type: string, examples: [Egypt, Jordan] }
+        - name: min
+          in: query
+          description: Minimum "from" price in dollars.
+          schema: { type: number }
+        - name: max
+          in: query
+          description: Maximum "from" price in dollars.
+          schema: { type: number }
+        - name: duration
+          in: query
+          description: "Comma-separated duration buckets: `short` (up to 3 h), `half` (4–6 h), `full` (7–14 h), `multi` (overnight or longer)."
+          schema: { type: string, examples: ["half,full"] }
+        - name: tags
+          in: query
+          description: Comma-separated tag slugs (up to 10).
+          schema: { type: string, examples: ["family,snorkelling"] }
+        - name: private
+          in: query
+          description: "`1` for private trips only."
+          schema: { type: string, enum: ["1"] }
+        - name: pickup
+          in: query
+          description: "`1` for trips with hotel pickup."
+          schema: { type: string, enum: ["1"] }
+        - name: guests
+          in: query
+          description: Only products that take this many guests.
+          schema: { type: integer, minimum: 1 }
+        - name: sort
+          in: query
+          schema: { type: string, enum: [recommended, cheapest, rating, shortest], default: recommended }
+      responses:
+        "200":
+          description: Matching products.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [count, results]
+                properties:
+                  count: { type: integer }
+                  results:
+                    type: array
+                    items: { $ref: "#/components/schemas/ProductSummary" }
+              example:
+                count: 1
+                results:
+                  - id: 1
+                    slug: giza-pyramids-sphinx-day-tour
+                    category: tour
+                    title: "Pyramids of Giza, Sphinx & Grand Egyptian Museum"
+                    summary: The Great Pyramid, the Sphinx and Tutankhamun's treasures with an Egyptologist, in one unhurried day.
+                    destination: Giza
+                    country: Egypt
+                    countryCode: EG
+                    priceCents: 4500
+                    currency: USD
+                    priceUnit: person
+                    duration: Full day · 8 hours
+                    durationMinutes: 480
+                    rating: 4.7
+                    reviewCount: 3
+                    image: https://res.cloudinary.com/demo/image/upload/giza.jpg
+
+  /products/{id}/availability:
+    get:
+      tags: [Availability]
+      operationId: getAvailability
+      summary: Day-by-day availability
+      description: |
+        For products sold on request (no availability calendar), `onRequest` is `true` and `days` is empty:
+        any date can be requested and the team confirms it.
+
+        The range defaults to today plus 120 days, and can be at most 400 days.
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema: { type: integer, minimum: 1 }
+        - name: from
+          in: query
+          schema: { type: string, format: date }
+        - name: to
+          in: query
+          schema: { type: string, format: date }
+        - name: seats
+          in: query
+          description: Seats needed; days with fewer seats left are `full`.
+          schema: { type: integer, minimum: 1, maximum: 100, default: 1 }
+      responses:
+        "200":
+          description: Availability. Cached for 30 seconds.
+          headers:
+            Cache-Control:
+              schema: { type: string, example: "public, max-age=30, stale-while-revalidate=60" }
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Availability" }
+              example:
+                onRequest: false
+                days:
+                  - { date: "2026-11-20", seatsLeft: 12, status: open }
+                  - { date: "2026-11-21", seatsLeft: 0, status: full }
+                  - { date: "2026-11-22", seatsLeft: 0, status: closed }
+        "404":
+          description: Not a valid product id.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: Bad `from` or `to`.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+
+  /quote:
+    post:
+      tags: [Pricing]
+      operationId: quote
+      summary: Price a selection
+      description: |
+        Prices an option, date, guests, add-ons and promo code exactly as a booking would, without booking.
+        Use it to show a total before checkout.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: "#/components/schemas/QuoteRequest" }
+            example:
+              productId: 1
+              optionId: 1
+              addonIds: [1]
+              travelDate: "2026-11-20"
+              adults: 2
+              children: 1
+              infants: 0
+              tierGuests: { senior-65: 1 }
+              promoCode: WELCOME10
+      responses:
+        "200":
+          description: The price.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Quote" }
+              example:
+                ok: true
+                option: { id: 1, name: Small group }
+                promoCode: WELCOME10
+                lines:
+                  - { label: "2 adults × $45", amountCents: 9000 }
+                  - { label: "1 child (4–11) × $22.50", amountCents: 2250 }
+                  - { label: "1 × Senior (65+) × $36", amountCents: 3600 }
+                  - { label: "Lunch with a pyramid view × 4", amountCents: 4800 }
+                  - { label: "Promo WELCOME10", amountCents: -1965 }
+                subtotalCents: 19650
+                discountCents: 1965
+                totalCents: 17685
+                depositCents: 0
+        "404":
+          description: The product or option is no longer available.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+        "422":
+          description: |
+            The selection can't be priced: invalid input, a date outside the season or minimum notice,
+            too many guests, an unknown or expired promo code.
+          content:
+            application/json:
+              schema: { $ref: "#/components/schemas/Error" }
+              example: { error: "At least one adult is required.", code: validation }
+
+components:
+  schemas:
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error: { type: string, description: A message that can be shown to people. }
+        code: { type: string, description: "Machine-readable, e.g. validation, not_found, rate_limited." }
+
+    ProductSummary:
+      type: object
+      required: [id, slug, category, title, priceCents, currency, priceUnit]
+      properties:
+        id: { type: integer }
+        slug: { type: string }
+        category: { type: string, enum: [tour, cruise, transfer, stay, package] }
+        title: { type: string }
+        summary: { type: string }
+        destination: { type: [string, "null"] }
+        country: { type: [string, "null"] }
+        countryCode: { type: [string, "null"], description: ISO 3166-1 alpha-2. }
+        priceCents: { type: integer, description: '"From" price in cents.' }
+        currency: { type: string, example: USD }
+        priceUnit:
+          type: string
+          enum: [person, group, vehicle, night]
+          description: What the price is per.
+        duration: { type: [string, "null"], description: "For people, e.g. Full day · 8 hours." }
+        durationMinutes: { type: [integer, "null"] }
+        rating: { type: number, minimum: 0, maximum: 5 }
+        reviewCount: { type: integer }
+        image: { type: [string, "null"], format: uri }
+
+    Availability:
+      type: object
+      required: [onRequest, days]
+      properties:
+        onRequest:
+          type: boolean
+          description: True when the product has no calendar and any date can be requested.
+        days:
+          type: array
+          items:
+            type: object
+            required: [date, seatsLeft, status]
+            properties:
+              date: { type: string, format: date }
+              seatsLeft: { type: integer, minimum: 0 }
+              status:
+                type: string
+                enum: [open, full, closed]
+                description: "`full`: open but fewer seats left than requested. `closed`: not running."
+
+    QuoteRequest:
+      type: object
+      required: [productId, travelDate, adults]
+      properties:
+        productId: { type: integer, minimum: 1 }
+        optionId: { type: [integer, "null"], minimum: 1 }
+        addonIds:
+          type: array
+          maxItems: 20
+          items: { type: integer, minimum: 1 }
+          default: []
+        promoCode: { type: [string, "null"], maxLength: 40 }
+        travelDate: { type: string, format: date }
+        endDate:
+          type: [string, "null"]
+          format: date
+          description: Check-out date for stays.
+        adults:
+          type: integer
+          minimum: 0
+          maximum: 50
+          description: Full-price adults. Can be 0 when `tierGuests` has at least one guest.
+        children: { type: integer, minimum: 0, maximum: 50, default: 0 }
+        infants: { type: integer, minimum: 0, maximum: 20, default: 0 }
+        tierGuests:
+          type: object
+          description: |
+            Guests per guest type the product defines, keyed by the type's key (a slug of its label, e.g.
+            `senior-65`). Unknown keys are ignored. Only applies to per-person prices.
+          propertyNames: { pattern: "^[a-z0-9-]{1,30}$" }
+          additionalProperties: { type: integer, minimum: 0, maximum: 50 }
+          default: {}
+
+    Quote:
+      type: object
+      required: [ok, lines, subtotalCents, discountCents, totalCents, depositCents]
+      properties:
+        ok: { type: boolean, const: true }
+        option:
+          type: [object, "null"]
+          properties:
+            id: { type: integer }
+            name: { type: string }
+        promoCode: { type: [string, "null"] }
+        lines:
+          type: array
+          items:
+            type: object
+            required: [label, amountCents]
+            properties:
+              label: { type: string }
+              amountCents: { type: integer }
+        subtotalCents: { type: integer }
+        discountCents: { type: integer }
+        totalCents: { type: integer }
+        depositCents:
+          type: integer
+          description: Due when the booking is confirmed; 0 when everything is paid later.

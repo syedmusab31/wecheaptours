@@ -8,7 +8,7 @@ import { formatCents, formatMoney, type Currency } from "@/lib/money";
 import { addDays } from "@/lib/dates";
 import { earliestDate, latestDate, shortCancellation } from "@/features/booking/domain/booking-policy";
 import { PRICE_UNIT_LABEL } from "@/features/catalog/catalog.constants";
-import { quote, seatsNeeded, type PricingRule } from "@/features/booking/domain/pricing";
+import { quote, seatsNeeded, type GuestTier, type PricingRule } from "@/features/booking/domain/pricing";
 
 export type PanelProduct = {
   id: number;
@@ -91,6 +91,7 @@ export function BookingPanel({
   options = [],
   addons = [],
   rules = [],
+  tiers = [],
   currency,
   rates,
   initial,
@@ -99,6 +100,8 @@ export function BookingPanel({
   options?: PanelOption[];
   addons?: PanelAddon[];
   rules?: PanelRule[];
+  /** Senior, student… prices as a share of the adult price (per-person products) */
+  tiers?: GuestTier[];
   currency: Currency;
   rates: Record<Currency, number>;
   initial?: { date?: string; end?: string; guests?: number; option?: number };
@@ -126,6 +129,7 @@ export function BookingPanel({
   );
   const [children, setChildren] = useState(0);
   const [infants, setInfants] = useState(0);
+  const [tierGuests, setTierGuests] = useState<Record<string, number>>({});
   const [addonIds, setAddonIds] = useState<number[]>([]);
   const [touched, setTouched] = useState(false);
   const [availability, setAvailability] = useState<{ onRequest: boolean; days: DayAvailability[] } | null>(
@@ -135,7 +139,9 @@ export function BookingPanel({
   const perPerson = basis.priceUnit === "person";
   const money = (usd: number) => formatMoney(usd, currency, rates, { decimals: true });
   const cents = (c: number) => formatCents(c, currency, rates, { decimals: true });
-  const seats = seatsNeeded(basis.priceUnit, adults, children);
+  const shownTiers = useMemo(() => (basis.priceUnit === "person" ? tiers : []), [basis.priceUnit, tiers]);
+  const tierCount = shownTiers.reduce((n, t) => n + (tierGuests[t.key] ?? 0), 0);
+  const seats = seatsNeeded(basis.priceUnit, adults, children, tierCount);
 
   // Live availability (sold-out and closed dates); products without a calendar are "on request"
   useEffect(() => {
@@ -183,13 +189,30 @@ export function BookingPanel({
         adults,
         children,
         infants,
+        tiers: shownTiers,
+        tierGuests,
         rules: rules.filter((r) => r.optionId == null || r.optionId === optionId),
         addons: addons.filter((a) => addonIds.includes(a.id)),
       }),
-    [p, basis, date, end, adults, children, infants, isStay, rules, addons, addonIds, optionId],
+    [
+      p,
+      basis,
+      date,
+      end,
+      adults,
+      children,
+      infants,
+      isStay,
+      rules,
+      addons,
+      addonIds,
+      optionId,
+      shownTiers,
+      tierGuests,
+    ],
   );
 
-  const room = basis.maxGuests - adults - children - infants;
+  const room = basis.maxGuests - adults - children - infants - tierCount;
 
   function go() {
     setTouched(true);
@@ -198,6 +221,7 @@ export function BookingPanel({
     if (isStay) params.set("end", end);
     if (optionId) params.set("o", String(optionId));
     if (addonIds.length) params.set("x", addonIds.join(","));
+    for (const t of shownTiers) if (tierGuests[t.key]) params.set(`t.${t.key}`, String(tierGuests[t.key]));
     router.push(`/book/${p.slug}?${params.toString()}`);
   }
 
@@ -302,10 +326,21 @@ export function BookingPanel({
           label="Adults"
           hint={perPerson ? "Age 12+" : undefined}
           value={adults}
-          min={1}
+          min={shownTiers.length ? 0 : 1}
           max={Math.max(1, adults + room)}
           onChange={setAdults}
         />
+        {shownTiers.map((t) => (
+          <Stepper
+            key={t.key}
+            label={t.label}
+            hint={`${Math.round(t.share * 100)}% of the adult price`}
+            value={tierGuests[t.key] ?? 0}
+            min={0}
+            max={(tierGuests[t.key] ?? 0) + room}
+            onChange={(n) => setTierGuests((cur) => ({ ...cur, [t.key]: n }))}
+          />
+        ))}
         <Stepper
           label="Children"
           hint={perPerson ? "Age 4–11, half price" : "Age 4–11"}

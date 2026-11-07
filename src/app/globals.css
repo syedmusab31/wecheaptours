@@ -15,11 +15,11 @@
 
   --color-ink: #0f1b33;
   --color-ink-soft: #46546f;
-  --color-ink-mute: #6d7a93;
+  --color-ink-mute: #5f6b85; /* 4.8:1 on mist, WCAG AA for small text */
   --color-lapis: #2443c8;
   --color-lapis-deep: #1b35a3;
   --color-lapis-tint: #e8edfc;
-  --color-faience: #0b7f77;
+  --color-faience: #0a766f; /* 4.8:1 on faience-tint */
   --color-faience-tint: #e1f4f1;
   --color-sun: #ffb627;
   --color-sun-tint: #fff4dc;

@@ -13,8 +13,15 @@ import { productHref } from "@/lib/routes";
 import { formatDate } from "@/lib/utils";
 import { AppError } from "@/server/errors";
 import { TrackOnView } from "@/components/analytics/TrackOnView";
+import { describeGuests } from "@/features/booking/domain/guests";
 
 export const metadata: Metadata = { title: "Your booking request", robots: { index: false } };
+
+/** A guest count from the URL: whole number 0–50, or the fallback */
+const count = (v: string | undefined, fallback: number) => {
+  const n = Number(v);
+  return Number.isInteger(n) && n >= 0 && n <= 50 ? n : fallback;
+};
 
 type Props = { params: Promise<{ slug: string }>; searchParams: Promise<Record<string, string | undefined>> };
 
@@ -35,9 +42,15 @@ export default async function BookPage({ params, searchParams }: Props) {
       .slice(0, 20),
     travelDate: sp.date ?? "",
     endDate: sp.end ?? null,
-    adults: Number(sp.a ?? 1) || 1,
-    children: Number(sp.c ?? 0) || 0,
-    infants: Number(sp.i ?? 0) || 0,
+    adults: count(sp.a, 1),
+    children: count(sp.c, 0),
+    infants: count(sp.i, 0),
+    // Tier guests arrive as t.senior-65=1
+    tierGuests: Object.fromEntries(
+      Object.entries(sp)
+        .filter(([k]) => /^t\.[a-z0-9-]{1,30}$/.test(k))
+        .map(([k, v]) => [k.slice(2), count(v, 0)]),
+    ),
   };
 
   let priced;
@@ -59,13 +72,7 @@ export default async function BookPage({ params, searchParams }: Props) {
 
   const fmt = (usd: number) => formatMoney(usd, money.currency, money.rates, { decimals: true });
   const cents = (c: number) => formatCents(c, money.currency, money.rates, { decimals: true });
-  const guests = [
-    `${input.adults} adult${input.adults > 1 ? "s" : ""}`,
-    input.children ? `${input.children} child${input.children > 1 ? "ren" : ""}` : "",
-    input.infants ? `${input.infants} infant${input.infants > 1 ? "s" : ""}` : "",
-  ]
-    .filter(Boolean)
-    .join(", ");
+  const guests = describeGuests({ ...input, tierGuests: priced.tierGuests });
 
   return (
     <div className="mx-auto max-w-6xl px-4 pt-8 pb-16 sm:px-6">

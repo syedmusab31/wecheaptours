@@ -56,3 +56,48 @@ jobs:
       - run: npm run format:check
       - run: npm run test:coverage
       - run: npm run build
+
+  # The booking journey in a real browser: guest books, admin signs in with the emailed code and
+  # confirms, guest sees it confirmed. Plus smoke and accessibility (axe, WCAG 2.1 AA) checks.
+  e2e:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    services:
+      postgres:
+        image: postgres:16
+        env:
+          POSTGRES_PASSWORD: postgres
+          POSTGRES_DB: wecheaptours_e2e
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U postgres" --health-interval 5s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgres://postgres:postgres@localhost:5432/wecheaptours_e2e
+      AUTH_SECRET: ci-only-secret-0123456789abcdef0123456789abcdef
+      CRON_SECRET: ci-only-cron-secret-0123456789abcdef0123456789
+      NEXT_PUBLIC_SITE_URL: http://localhost:3000
+      # The dev mail sink (npm run mail:dev) catches every email; tests read the sign-in code from it
+      SMTP_HOST: localhost
+      SMTP_PORT: "1025"
+      SMTP_USER: ci
+      SMTP_PASSWORD: ci
+      NEXT_TELEMETRY_DISABLED: "1"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - run: npx playwright install --with-deps chromium
+      - run: npm run db:setup
+      - run: npm run build
+      - run: npm run test:e2e
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: playwright-report
+          path: |
+            playwright-report
+            test-results
+          retention-days: 7

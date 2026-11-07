@@ -92,7 +92,9 @@ export default async function Dashboard() {
                     <Link href={`/admin/bookings/${b.id}`} className="hover:text-lapis">
                       <b>{formatDate(b.travelDate, true)}</b> · {b.productTitle}
                       <span className="text-ink-mute block">
-                        {b.customerName}, {b.adults + b.children + b.infants} guests
+                        {b.customerName},{" "}
+                        {b.adults + b.children + b.infants + b.tierGuests.reduce((n, t) => n + t.count, 0)}{" "}
+                        guests
                         {b.pickupLocation ? ` · ${b.pickupLocation}` : ""}
                       </span>
                     </Link>

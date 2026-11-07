@@ -39,6 +39,7 @@ export const paymentKindEnum = pgEnum("payment_kind", ["deposit", "balance", "fu
 export const paymentRecordStatusEnum = pgEnum("payment_record_status", ["pending", "succeeded", "failed"]);
 
 export type PriceLine = { label: string; amountCents: number };
+export type BookedTier = { key: string; label: string; count: number };
 export type BookedAddon = { id: number; name: string; quantity: number; amountCents: number };
 
 export const bookings = pgTable(
@@ -60,6 +61,8 @@ export const bookings = pgTable(
     adults: integer("adults").notNull().default(1),
     children: integer("children").notNull().default(0),
     infants: integer("infants").notNull().default(0),
+    /** Senior, student… guests, with the labels as booked */
+    tierGuests: jsonb("tier_guests").$type<BookedTier[]>().notNull().default([]),
     units: integer("units").notNull().default(1),
     // Money in minor units of `currency`
     unitPriceCents: integer("unit_price_cents").notNull(),

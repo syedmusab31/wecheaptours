@@ -323,3 +323,54 @@ describeDb("admin lists: pagination", () => {
     expect(seen).toEqual(made.map((b) => b.id).reverse());
   });
 });
+
+describeDb("booking.service: guest tiers", () => {
+  beforeEach(resetDatabase);
+
+  it("charges senior and student prices and keeps their labels on the booking", async () => {
+    const { createBooking } = await services();
+    const product = await createProduct({
+      priceCents: 5000,
+      guestTiers: [
+        { key: "senior", label: "Senior (65+)", share: 0.8 },
+        { key: "student", label: "Student", share: 0.5 },
+      ],
+    });
+    const booking = await createBooking({
+      ...guest,
+      adults: 1,
+      children: 0,
+      tierGuests: { senior: 2, student: 1, unknown: 4 },
+      productId: product.id,
+      travelDate: isoInDays(10),
+    });
+    // 50.00 + 2 × 40.00 + 25.00
+    expect(booking.totalCents).toBe(15500);
+    expect(booking.tierGuests).toEqual([
+      { key: "senior", label: "Senior (65+)", count: 2 },
+      { key: "student", label: "Student", count: 1 },
+    ]);
+  });
+
+  it("books a group with no full-price adults, and refuses one with nobody paying", async () => {
+    const { createBooking } = await services();
+    const { createBookingSchema } = await import("@/features/booking/booking.schema");
+    const product = await createProduct({
+      priceCents: 5000,
+      guestTiers: [{ key: "senior", label: "Senior (65+)", share: 0.8 }],
+    });
+    const input = createBookingSchema.parse({
+      ...guest,
+      acceptTerms: true,
+      productId: product.id,
+      travelDate: isoInDays(10),
+      adults: 0,
+      children: 0,
+      tierGuests: { senior: 2 },
+    });
+    expect((await createBooking(input)).totalCents).toBe(8000);
+    await expect(createBooking({ ...input, tierGuests: {}, idempotencyKey: null })).rejects.toThrow(
+      /At least one adult/,
+    );
+  });
+});

@@ -236,6 +236,22 @@ export function ProductForm({
         </p>
       </Section>
 
+      <Section
+        title="Senior, student and other prices"
+        hint="Per-person products only. One per line: name | percent of the adult price."
+      >
+        <label className="block">
+          <span className="label">Guest types</span>
+          <textarea
+            name="guestTiers"
+            rows={3}
+            defaultValue={p?.guestTiers.map((t) => `${t.label} | ${Math.round(t.share * 100)}`).join("\n")}
+            placeholder={"Senior (65+) | 80\nStudent (with ID) | 75"}
+            className="field"
+          />
+        </label>
+      </Section>
+
       <Section title="What's in it" hint="One item per line.">
         <label className="block">
           <span className="label">Highlights</span>

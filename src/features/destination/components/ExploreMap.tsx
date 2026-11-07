@@ -59,7 +59,7 @@ export function ExploreMap({ points, initial = "luxor" }: { points: MapPoint[]; 
         <svg
           viewBox={`${-PAD} ${-PAD} ${MAP_W + PAD * 2} ${MAP_H + PAD * 2}`}
           className="block h-auto w-full"
-          role="img"
+          role="group"
           aria-label="Map of Egypt and Jordan with WeCheapTours destinations"
         >
           <defs>
@@ -137,7 +137,7 @@ export function ExploreMap({ points, initial = "luxor" }: { points: MapPoint[]; 
                 key={p.slug}
                 role="button"
                 tabIndex={0}
-                aria-label={`${p.name}${p.fromLabel ? `, from ${p.fromLabel}` : ""}`}
+                aria-label={p.fromLabel ? `${p.name} ${p.fromLabel}` : p.name}
                 aria-pressed={on}
                 className="cursor-pointer outline-none"
                 onMouseEnter={() => setActive(p.slug)}
